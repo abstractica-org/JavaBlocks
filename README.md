@@ -1,2 +1,2 @@
 # JavaBlocks
-An experiment with block programming for multithreaded pipelines.
+A "block" programming approach for multithreaded pipelines.
