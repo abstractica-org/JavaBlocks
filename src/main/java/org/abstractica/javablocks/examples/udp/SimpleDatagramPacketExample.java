@@ -11,7 +11,7 @@ public class SimpleDatagramPacketExample
 	{
 		Input<String> keyboard = BasicBlocks.getKeyboardBlock();
 		Output<String> console = BasicBlocks.getConsoleBlock();
-		ThreadBlock thread = BasicBlocks.getThreadBlock();
+		ThreadBlock<DatagramPacket> thread = BasicBlocks.getThreadBlock();
 		PullBlock<String, DatagramPacket> stringToDatagramPacket = BasicBlocks.getPullBlock(UDPFunctions.getStringToDatagramPacketFunction());
 		PushBlock<DatagramPacket, String> datagramPacketToString = BasicBlocks.getPushBlock(UDPFunctions.getDatagramPacketToStringFunction());
 

@@ -6,26 +6,12 @@
 
     <groupId>org.abstractica</groupId>
     <artifactId>AbstracticaProjectTemplate</artifactId>
-    <version>1.0.0</version>
-
-    <repositories>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-    </repositories>
+    <version>0.1.0</version>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>22</maven.compiler.source>
+        <maven.compiler.target>22</maven.compiler.target>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.github.abstractica-org</groupId>
-            <artifactId>AbstracticaBase</artifactId>
-            <version>main-SNAPSHOT</version>
-        </dependency>
-    </dependencies>
 
 </project>

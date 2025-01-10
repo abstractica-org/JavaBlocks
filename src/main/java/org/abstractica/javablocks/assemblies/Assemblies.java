@@ -18,7 +18,7 @@ public class Assemblies
 				Function<E, DatagramPacket> toDatagramPacket
 			) throws SocketException, UnknownHostException
 	{
-		return new BufferedSocketBlockImpl
+		return new BufferedSocketBlockImpl<E>
 				(
 						port,
 						maxPacketSize,
