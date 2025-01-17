@@ -24,7 +24,7 @@ public class PushBlockImpl<From, To>
     }
 
     @Override
-    public void put(From item) throws Exception
+    public void put(From item) throws InterruptedException
     {
         DEBUG(" put(" + item + ")");
         if(output == null)

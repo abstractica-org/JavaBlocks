@@ -55,13 +55,13 @@ public class BufferedSocketBlockImpl<E>  extends AbstractBlock
 	}
 
 	@Override
-	public E get() throws Exception
+	public E get() throws InterruptedException
 	{
 		return recieveBuffer.get();
 	}
 
 	@Override
-	public void put(E packet) throws Exception
+	public void put(E packet) throws InterruptedException
 	{
 		sendBuffer.put(packet);
 	}

@@ -29,7 +29,7 @@ public class PingPongBlockImpl<Key, E, Handler extends Output<E>> extends Abstra
 
 
 	@Override
-	public void put(E item) throws Exception
+	public void put(E item) throws InterruptedException
 	{
 		mapBlock.put(item);
 	}
@@ -43,7 +43,7 @@ public class PingPongBlockImpl<Key, E, Handler extends Output<E>> extends Abstra
 	private class TimerConnector implements Output<Long>
 	{
 		@Override
-		public void put(Long timeout) throws Exception
+		public void put(Long timeout) throws InterruptedException
 		{
 			long curTime = System.currentTimeMillis();
 			Iterable<PingPongHandler<Key, E, Handler>> handlers = mapBlock.getAllHandlers();

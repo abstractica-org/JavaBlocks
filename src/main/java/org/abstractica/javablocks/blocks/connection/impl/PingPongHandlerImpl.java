@@ -43,7 +43,7 @@ public class PingPongHandlerImpl<Key, E, Handler extends Output<E>>
 
 
 	@Override
-	public void put(E msg) throws Exception
+	public void put(E msg) throws InterruptedException
 	{
 		//Incoming message
 		lastMessageReceivedTime = System.currentTimeMillis();

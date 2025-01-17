@@ -12,13 +12,13 @@ public class VariableBlockImpl<E> extends AbstractBlock implements VariableBlock
 	}
 
 	@Override
-	public synchronized E get() throws Exception
+	public synchronized E get() throws InterruptedException
 	{
 		return value;
 	}
 
 	@Override
-	public synchronized void put(E value) throws Exception
+	public synchronized void put(E value) throws InterruptedException
 	{
 		this.value = value;
 	}

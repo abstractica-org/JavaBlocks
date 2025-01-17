@@ -39,17 +39,29 @@ public class UDPSocketBlockImpl extends AbstractBlock
     }
 
     @Override
-    public DatagramPacket get() throws Exception
+    public DatagramPacket get() throws InterruptedException
     {
         byte[] buffer = new byte[maxPacketSize];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-        socket.receive(packet);
+        try
+        {
+            socket.receive(packet);
+        } catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
         return packet;
     }
 
     @Override
-    public void put(DatagramPacket item) throws IOException
+    public void put(DatagramPacket item) throws InterruptedException
     {
-        socket.send(item);
+        try
+        {
+            socket.send(item);
+        } catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 }

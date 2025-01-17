@@ -12,7 +12,7 @@ public class SimpleHandler implements Output<String>
 	}
 
 	@Override
-	public void put(String item) throws Exception
+	public void put(String item) throws InterruptedException
 	{
 		System.out.println("Handler for " + key + " is handeling -> " + item);
 	}

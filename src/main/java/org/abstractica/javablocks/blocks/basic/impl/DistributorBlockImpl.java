@@ -37,7 +37,7 @@ public class DistributorBlockImpl<E> extends AbstractBlock implements Distributo
     }
 
     @Override
-    public synchronized void put(E item) throws Exception
+    public synchronized void put(E item) throws InterruptedException
     {
         for(Output<E> output : outputs)
         {

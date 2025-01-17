@@ -57,7 +57,7 @@ public class Reporter implements Output<String>
 	}
 
 	@Override
-	public void put(String msg) throws Exception
+	public void put(String msg) throws InterruptedException
 	{
 		out.println(prefix + msg);
 	}

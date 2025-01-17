@@ -12,7 +12,7 @@ public class ConstantBlockImpl<E> extends AbstractBlock implements ConstantBlock
 	}
 
 	@Override
-	public E get() throws Exception
+	public E get() throws InterruptedException
 	{
 		return value;
 	}

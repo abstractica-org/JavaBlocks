@@ -24,7 +24,7 @@ public class PullBlockImpl<From, To>
     }
 
     @Override
-    public To get() throws Exception
+    public To get() throws InterruptedException
     {
         if(input == null)
         {

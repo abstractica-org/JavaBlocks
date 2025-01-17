@@ -65,7 +65,7 @@ public class MapBlockImpl<Key, E, Handler extends MapHandlerBlock<Key, E>>
 	}
 
 	@Override
-	public void put(E item) throws Exception
+	public void put(E item) throws InterruptedException
 	{
 		Key key = handlerFactory.extractKey(item);
 		Handler handler;

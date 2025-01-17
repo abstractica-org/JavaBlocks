@@ -30,7 +30,7 @@ public class IfBlockImpl<E>  extends AbstractBlock implements IfBlock<E>
     }
 
     @Override
-    public void put(E item) throws Exception
+    public void put(E item) throws InterruptedException
     {
         if(trueOut == null || falseOut == null)
         {
