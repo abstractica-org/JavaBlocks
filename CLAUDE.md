@@ -4,8 +4,9 @@ A block programming approach for multithreaded pipelines — a plain Java
 library of push/pull/thread/buffer/map blocks wired into dataflow
 pipelines.
 
-**Status (verified 2026-09-23):** the `v0.2.0` code (`3076b2a`,
-2025-01-17), byte for byte, on the real pom (J2:
+**Status (verified 2026-09-23):** `v0.2.1` — the `v0.2.0` code
+(`3076b2a`, 2025-01-17), byte for byte, pinned by 34 characterization
+tests (J3) on the real pom (J2:
 `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5). No CI.
 The owner works on several machines, so `origin/main` may trail your
 checkout — check `git log origin/main..main` first.
@@ -22,15 +23,21 @@ checkout — check `git log origin/main..main` first.
 
 ## The rules of this codebase
 
-- **Pin before you change.** Characterization tests of what `v0.2.0`
-  does, warts included, come before any edit to a block — the library's
-  value is its concurrency semantics (who owns a thread, where
-  `put`/`get` block, what `stop()` waits for), and nothing else checks
-  them. A behaviour change is then a visible test change in the same
-  commit, with a log entry saying why.
+- **Pin before you change.** The characterization tests under
+  `src/test/` describe what `v0.2.0` does, warts included — the
+  library's value is its concurrency semantics (who owns a thread,
+  where `put`/`get` block, what `stop()` waits for), and nothing else
+  checks them. A behaviour change is a visible test change in the same
+  commit, with a log entry saying why. Every test was proven able to
+  fail (J3) — keep it that way.
 - **Cleanup is its own logged step.** The known warts — handler set
   never shrinks, non-volatile handler timestamps, unsynchronized
-  `MapBlock.getSize`, the reporter singletons — are fixed one at a time,
+  `MapBlock.getSize`, the reporter singletons; and from J3: `stop()`
+  deadlocks or never returns unless the worker is parked in an
+  interruptible `get()` (the timer idiom is unstoppable), a downstream
+  exception kills the worker while `isRunning()` stays true,
+  `DelayFunction` swallows interrupts, capacity-0 buffers block every
+  put, the distributor forwards under its monitor — are fixed one at a time,
   each ruled by the owner, never in passing; a fix buried in a feature
   commit cannot be reverted alone.
 - **Owner designs the outside.** The declarative assembly's shape is the

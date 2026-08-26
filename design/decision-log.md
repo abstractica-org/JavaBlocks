@@ -64,3 +64,79 @@ No `src/` change. `mvn clean verify` is green on JDK 25.0.4 / Maven
 3.8.7; the jar is `javablocks-0.3.0-SNAPSHOT.jar`, class files at
 major 69. The `java-library` profile claim is now verified against the
 build (java, maven, junit all exercised).
+
+## J3 — Characterization tests pin `v0.2.0`; tagged `v0.2.1` (steward, 2026-08-26)
+
+34 JUnit 5 tests under `src/test/java/org/abstractica/javablocks/blocks/basic/`,
+one class per block family, describing what `v0.2.0` does — warts
+included, none fixed. `src/main` is byte-identical to `3076b2a`. Every
+pinned behaviour was proven able to fail: thirteen one-line mutations
+of the implementation (put never blocks, stop ignores the in-flight
+put, the post-put `notifyAll` lock removed, distributor reversed and
+unlocked, if-check removed, a new map handler per put, handler put
+under the map lock, delay as a single sleep, …) each turned exactly
+the tests that claim that behaviour red, and were reverted with git.
+Three consecutive full runs green, ~9 s. Support classes live in
+`testsupport/` (`Sink`, `BlockingSink`, `Async`); a
+`junit-platform.properties` sets a 30 s default timeout so a hang
+fails instead of stalling the build.
+
+**What is pinned** (the list in `STARTUP.md` step 2, plus what the
+tests surfaced):
+
+- *Buffer:* bounded FIFO; put blocks when full, get when empty, both
+  throw `InterruptedException` when interrupted; capacity 1 is
+  `SingleBufferBlockImpl` with the same semantics; wraps the ring.
+- *ThreadBlock:* `start` throws unless both sides are set; hand-off
+  runs on one worker thread per `start`; restartable; setters throw
+  while running; `stop` returns only after an in-flight `put`.
+- *Distributor:* forwards in registration order on the caller's
+  thread; `getOutputs` is a copy; `put` holds the monitor.
+- *If:* routes by predicate; throws `"Block not fully connected!"`
+  when half-connected, even if the connected side would be taken.
+- *Map:* one handler per new key, created on the caller's thread and
+  reused; `getAllHandlers` is a snapshot; nothing destroyed unasked;
+  `removeHandler` destroys through the factory and a later put
+  creates afresh; `handler.put` runs outside the map lock.
+- *Function blocks:* push/pull apply on the caller's thread and throw
+  `IllegalStateException` unconnected; variable is a lossy register;
+  constant never changes; trashcan swallows; Keyboard/Console are
+  singletons; `Constant + ThreadBlock + DelayFunction` ticks.
+
+**Warts the tests surfaced, beyond the ones already listed in
+`CLAUDE.md`** — each is now a candidate for a ruled cleanup step
+(J1: one at a time, never in passing):
+
+1. **`stop()` can complete only when the worker is parked inside an
+   *interruptible* `get()`** (a buffer). `stop()` is `synchronized`
+   and `join()`s while holding the monitor; the worker needs that
+   monitor for its post-put `synchronized(this){ notifyAll(); }`.
+   With any input whose `get()` returns instead of throwing on
+   interrupt — `ConstantBlock`, a `DelayFunction` on either side, the
+   UDP socket — `stop()` either keeps seeing `doingOutput == true`
+   and re-waits in 5 s rounds, or wins the microsecond window and
+   deadlocks in `join()`; every later `isRunning()` then blocks
+   too. **The library's own timer idiom (`FirstTest`) is therefore
+   unstoppable.** Found because the first test run hung; pinned by
+   `stopDeadlocksWithAWorkerWhoseGetSurvivesTheInterrupt` and the two
+   timer tests.
+2. A `RuntimeException` from downstream kills the worker (rethrown,
+   uncaught) while `isRunning()` stays true and `stop()` never
+   returns (`doingOutput` is never reset).
+3. `DelayFunction` swallows interrupts and always sleeps the full
+   delay — which is what turns wart 1 into a deadlock for timers.
+4. A capacity-0 buffer is constructible and blocks every `put`.
+5. `DistributorBlock.put` holds the block's monitor while forwarding,
+   so a slow output blocks `addOutput`/`removeOutput`.
+
+The tests that pin warts 1–2 deliberately leave a deadlocked or dead
+worker behind (non-daemon; surefire exits regardless). When a wart is
+fixed, its test changes in the same commit — that is the point of the
+pin.
+
+*Rejected:* silencing the reporters globally for the test run. The
+default reporters printing `INFO:`/`DEBUG:` to stdout on every put is
+`v0.2.0` behaviour; the tests that must stay quiet use the block's own
+`setDebugReporter`. **Named revival trigger:** the reporter-singleton
+cleanup step (already on the list), which is where a test-time
+reporter belongs.
