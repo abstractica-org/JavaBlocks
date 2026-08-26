@@ -41,3 +41,26 @@ trigger:** a need to visualise a running JavaBlocks program that was
 *Risk named:* the code has no tests, and its value is concurrency
 semantics an agent can break while "tidying". The pin-first rule and
 the separate-cleanup rule are the mitigation; they are in `CLAUDE.md`.
+
+## J2 — The pom: `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5 (owner, 2026-08-26)
+
+The template pom (`AbstracticaProjectTemplate`, Java 22 source/target,
+no dependencies) replaced by the real one — the sole change J1 allows
+before the characterization tests, because nothing runs without it.
+
+- **Coordinates** `org.abstractica:javablocks`, version `0.3.0-SNAPSHOT`
+  (the first version after the pinned `v0.2.0`; the tests will tag
+  `v0.2.1` on the way).
+- **Java 25**, pinned via `maven.compiler.release` — the house standard,
+  ruled by the owner; the same form as `sandbox` and `ai-persona`.
+- **JUnit 5** (`junit-bom` 5.11.4, `junit-jupiter` test-scoped) so the
+  next step has a test runner. Surefire 3.5.2 and compiler 3.13.0
+  pinned in `pluginManagement`.
+- `distributionManagement` points at GitHub Packages for
+  `abstractica-org/JavaBlocks`, as the siblings do. Nothing is
+  published yet.
+
+No `src/` change. `mvn clean verify` is green on JDK 25.0.4 / Maven
+3.8.7; the jar is `javablocks-0.3.0-SNAPSHOT.jar`, class files at
+major 69. The `java-library` profile claim is now verified against the
+build (java, maven, junit all exercised).

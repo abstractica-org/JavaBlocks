@@ -4,8 +4,9 @@ A block programming approach for multithreaded pipelines — a plain Java
 library of push/pull/thread/buffer/map blocks wired into dataflow
 pipelines.
 
-**Status (verified 2026-09-10, `origin/main`):** `src/` is exactly
-`v0.2.0` (`3076b2a`, 2025-01-17); template `pom.xml`; no tests, no CI.
+**Status (verified 2026-09-23):** the `v0.2.0` code (`3076b2a`,
+2025-01-17), byte for byte, on the real pom (J2:
+`org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5). No CI.
 The owner works on several machines, so `origin/main` may trail your
 checkout — check `git log origin/main..main` first.
 
