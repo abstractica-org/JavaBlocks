@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$KNOWLEDGE_FOUNDATION_PATH\" ] && python3 \"$KNOWLEDGE_FOUNDATION_PATH/infrastructure/session-logger/session_logger.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$KNOWLEDGE_FOUNDATION_PATH\" ] && python3 \"$KNOWLEDGE_FOUNDATION_PATH/infrastructure/session-logger/session_logger.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

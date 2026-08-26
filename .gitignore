@@ -4,3 +4,5 @@
 # Target directory
 /target/
 
+# Foundation session-logger state (per-session)
+sessions/state/
