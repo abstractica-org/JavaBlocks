@@ -1,12 +1,19 @@
 # STARTUP — JavaBlocks
 
+Written 2026-08-26 at onboarding; revised 2026-09-10 by the foundation's
+Phase 7 conventions pass (tree fields, `CLAUDE.md` shape — no code work).
+It describes `origin/main`. The owner works on more than one machine
+(laptop, prodesk), so `origin/main` may be behind the checkout you are
+in: run `git log origin/main..main` and read `design/decision-log.md`
+past **J1** before trusting State and Scope below.
+
 You are in **JavaBlocks**, the owner's block-programming library for
 multithreaded pipelines, onboarded 2026-08-26. Read `design/decision-log.md`
 **J1** first — it is the charter for everything below.
 
 ## State
 
-- Code is exactly `v0.2.0` (`3076b2a`, 2025-01-17), handwritten by the
+- `src/` is exactly `v0.2.0` (`3076b2a`, 2025-01-17), handwritten by the
   owner alone. ~1,900 lines, no tests, no dependencies, no CI.
 - `pom.xml` is still the template (`artifactId:
   AbstracticaProjectTemplate`, Java 22). It has never been installed
@@ -25,7 +32,9 @@ multithreaded pipelines, onboarded 2026-08-26. Read `design/decision-log.md`
 1. **Fix the pom.** Real `artifactId` (`javablocks`), group
    `org.abstractica`, version `0.3.0-SNAPSHOT`, Java pinned (owner
    chooses; 25 is the house standard), JUnit 5 for tests. No `src/`
-   change. Build green.
+   change. Build green. Then re-test the profile: `java-library`
+   declares JUnit 5, which the template pom lacks (OPEN
+   `7.javablocks.profile` in the 2026-09-10 conventions PR).
 2. **Characterization tests** against `v0.2.0` behaviour, warts
    included. At least: bounded buffer blocks the producer when full and
    the consumer when empty; `ThreadBlock` hands off pull→push on its own
