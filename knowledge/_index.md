@@ -1,6 +1,7 @@
 ---
 type: project-node
-summary: "A block programming approach for multithreaded pipelines — a plain Java library of push/pull/thread/buffer/map blocks wired into dataflow pipelines."
+summary: "Open at the start of any JavaBlocks work — a plain-Java dataflow library where blocks wire by handing references, only `ThreadBlock` owns a thread and only `BufferBlock` holds back-pressure; the tree holds this orientation alone."
+verified: 2026-08-26
 ---
 
 # JavaBlocks

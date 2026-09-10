@@ -1,48 +1,58 @@
 # Claude Code — JavaBlocks
 
-A block programming approach for multithreaded pipelines — a plain Java library of push/pull/thread/buffer/map blocks wired into dataflow pipelines.
+A block programming approach for multithreaded pipelines — a plain Java
+library of push/pull/thread/buffer/map blocks wired into dataflow
+pipelines.
 
-**Status: pinned at `v0.2.0` (`3076b2a`, 2025-01-17), no tests yet,
-template pom.** Handwritten by the owner alone; proven in other
-projects; onboarded 2026-08-26 to gain a data-driven assembly and to
-serve as the second host vocabulary of `webapp-foundation`'s workflow
-viewer. Its design record is `design/decision-log.md` (entries **J1…**).
+**Status (verified 2026-09-10, `origin/main`):** `src/` is exactly
+`v0.2.0` (`3076b2a`, 2025-01-17); template `pom.xml`; no tests, no CI.
+The owner works on several machines, so `origin/main` may trail your
+checkout — check `git log origin/main..main` first.
+
+## Where things are
+
+- `design/decision-log.md` — the design record, entries **J1…**; J1 is
+  the charter.
+- `src/main/java/org/abstractica/javablocks/` — the code:
+  `blocks/basic/` interfaces, `blocks/basic/impl/` implementations,
+  `blocks/connection/firsttest/FirstTest` the only runnable check.
+- `knowledge/_index.md` — orientation; loads every session.
+- `STARTUP.md` — the handoff.
 
 ## The rules of this codebase
 
-- **Pin before you change.** The library's value is its concurrency
-  semantics — who owns a thread, where `put`/`get` block, what `stop()`
-  waits for. Nothing checks them today. Characterization tests that
-  describe what `v0.2.0` does, warts included, come before any edit to
-  a block; a behaviour change is then a visible change to a test in the
-  same commit, with a log entry saying why.
-- **Cleanup is its own logged step.** Known warts (handler set never
-  shrinks, non-volatile handler timestamps, unsynchronized
-  `MapBlock.getSize`, the reporter singletons) are fixed one at a time,
-  each ruled by the owner — never "in passing" while building something
-  else.
-- **Owner designs the outside.** The shape of the declarative assembly
-  is the one design decision here; the steward builds insides.
-- **Independent of `wiring`.** JavaBlocks and `wiring` are two hosts of
-  one viewer. They never depend on each other; that independence is the
-  viewer's domain-neutrality proof.
-- **The contract adapter comes last.** The JSON loader consumes the
-  viewer's graph contract, which is written in `wiring-playground` with
-  `wiring`. Until it exists, build the Java-side assembly it will target.
-- ONE thing at a time with the owner; log before build.
-
-## Profile note
-
-`java-library` is declared from the pom (Maven, Java) and the ruled
-plan: the pom has no JUnit yet — the first session adds it with the
-characterization tests. Re-test the profile then.
+- **Pin before you change.** Characterization tests of what `v0.2.0`
+  does, warts included, come before any edit to a block — the library's
+  value is its concurrency semantics (who owns a thread, where
+  `put`/`get` block, what `stop()` waits for), and nothing else checks
+  them. A behaviour change is then a visible test change in the same
+  commit, with a log entry saying why.
+- **Cleanup is its own logged step.** The known warts — handler set
+  never shrinks, non-volatile handler timestamps, unsynchronized
+  `MapBlock.getSize`, the reporter singletons — are fixed one at a time,
+  each ruled by the owner, never in passing; a fix buried in a feature
+  commit cannot be reverted alone.
+- **Owner designs the outside.** The declarative assembly's shape is the
+  one design decision here; propose, the owner rules, then build the
+  insides.
+- **Stay independent of `wiring`.** Two hosts of one viewer, never
+  depending on each other — that independence is the viewer's
+  domain-neutrality proof.
+- **The contract adapter comes last.** The viewer's graph contract is
+  written in `wiring-playground` with `wiring`; until it exists, build
+  the Java-side assembly it will target — the contract stays authored by
+  its owner.
+- **Log before you build.** Every step gets a `J` entry in
+  `design/decision-log.md` before code — the only record of why `v0.2.0`
+  changed.
 
 ## Session start and end
 
 Run `/wakeup` at session start and `/hibernate` at the end. They
 delegate to `/do wakeup` / `/do hibernate` against the foundation at
-`$KNOWLEDGE_FOUNDATION_PATH`. Session transcripts are captured by the
-hooks in `.claude/settings.json`.
+`$KNOWLEDGE_FOUNDATION_PATH`. The hooks in `.claude/settings.json`
+inject the session pack (`kt wakeup`) at `SessionStart` and capture
+the session transcript.
 
 If `/wakeup` says the env var is unset, add this to your shell
 profile and restart your shell:
