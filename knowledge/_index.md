@@ -1,7 +1,7 @@
 ---
 type: project-node
-summary: "Open at the start of any JavaBlocks work — a plain-Java dataflow library where blocks wire by handing references, only `ThreadBlock` owns a thread and only `BufferBlock` holds back-pressure; the tree holds this orientation alone."
-verified: 2026-08-26
+summary: "Open at the start of any JavaBlocks work — a plain-Java dataflow library where blocks wire by handing references, only `ThreadBlock` owns a thread and only `BufferBlock` holds back-pressure; the tree holds this orientation and the thread-model node."
+verified: 2026-09-23
 ---
 
 # JavaBlocks
@@ -56,6 +56,8 @@ assessment beside it. Neither is duplicated here.
 
 ## What this tree holds
 
-Only this orientation for now. Candidates once they are settled: the
-thread-domain model (which thread runs which block, and why), and the
-shape of the declarative assembly once the owner has ruled it.
+- `thread-model/` — the settled thread-domain model and the v0.2.0
+  `stop()` contract, crystallized from the J3 characterization tests.
+
+Candidate once it is settled: the shape of the declarative assembly
+once the owner has ruled it.
