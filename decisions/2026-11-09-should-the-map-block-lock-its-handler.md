@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-should-the-map-block-lock-its-handler
 title: Should the map block lock its handler count?
-status: proposed
+status: ruled
 stakes: low
 confidence: 90
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: eba163f7-4766-4239-b515-dcd76034fa77
 recommends: lock-the-read
@@ -49,3 +50,7 @@ Lock the read. It costs one line, matches how the rest of the map block already 
 ## If nothing is decided
 
 getSize() stays unlocked. Runs move on to the other cleanups; goal 1 cannot be called done until this is ruled.
+
+## Ruling
+
+**Lock the read** (`lock-the-read`). Tog, 2026-11-09, from the project pages.
