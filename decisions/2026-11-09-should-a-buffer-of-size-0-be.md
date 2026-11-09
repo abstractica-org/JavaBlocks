@@ -26,7 +26,7 @@ The fix would check the number when the buffer is built. The test flips from "ca
 
 **Pros:**
 - A host's mistake fails at once with a clear IllegalArgumentException, at the line that made it, instead of a silent hang later.
-- One check in one place (the factory and the buffer constructor).
+- One small check, in the buffer factory and the buffer constructor.
 - No method signatures change.
 
 **Cons:**

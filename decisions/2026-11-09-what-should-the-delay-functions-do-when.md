@@ -31,12 +31,12 @@ There is a catch: these are plain Java `Function`s, which cannot throw `Interrup
 
 **Cons:**
 - The item comes out early, so an interrupted delay did not really delay.
-- If some other caller's thread is interrupted mid-delay, the item goes downstream with the flag set, and a buffer there would then refuse it with InterruptedException.
+- If some other caller's thread is interrupted mid-delay, the item goes downstream with the flag set, and if a buffer there is full, its put refuses the item with InterruptedException instead of waiting (a buffer with room still accepts it).
 
 ### Abort with an exception
 
 **Pros:**
-- No tick is delivered after stop() is called: the in-flight tick is dropped, the most literal meaning of 'stop'.
+- With the delay on the input side, no tick is delivered after stop() is called: the in-flight tick is dropped, the most literal meaning of 'stop'. (On the output side nothing changes, as above.)
 - The thread block already swallows a failure caused by stop's own interrupt, so the worker exits quietly.
 
 **Cons:**
@@ -50,7 +50,7 @@ There is a catch: these are plain Java `Function`s, which cannot throw `Interrup
 
 **Cons:**
 - stop() still waits out the full delay, which is the part hosts actually feel.
-- Has the same item-refused-downstream risk as returning early, without the benefit.
+- Has the same risk as returning early (a full buffer downstream refuses the item), without the benefit.
 
 ### Leave it as it is
 

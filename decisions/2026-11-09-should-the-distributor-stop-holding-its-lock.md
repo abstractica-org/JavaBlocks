@@ -16,6 +16,8 @@ One of the seven known defects ("warts") your goals say to clean up first.
 
 The distributor block is the library's only broadcast: each message put into it is passed to every connected output, in the order they were added, on the caller's thread. Today `put` holds the block's lock for the whole forwarding loop. So while one output is slow (a full buffer downstream, a network send), nobody can add or remove an output, and a second producer cannot even start forwarding. If the thread that would drain that full buffer ever tries to add or remove an output, the two wait on each other forever. A characterization test (`putHoldsTheMonitorWhileForwarding`) pins today's behaviour.
 
+One hang no option fixes: if the only thread draining a full output buffer itself puts into the distributor, it blocks on that same full buffer whatever the locking. That is a wiring cycle, not a locking defect.
+
 The map block already avoids this exact pattern on purpose: it picks the handler under its lock and calls the handler outside it, and a test pins that ("other keys proceed").
 
 Releasing the lock has two visible consequences, and they are the real decision:
@@ -53,7 +55,7 @@ Releasing the lock has two visible consequences, and they are the real decision:
 
 **Cons:**
 - Two locks to reason about in a library whose risk is exactly this kind of reasoning.
-- Producers still queue behind a slow output, and the drain-thread deadlock remains if a downstream consumer also puts into the distributor.
+- Producers still queue behind a slow output, so one slow output still holds up every other producer.
 
 ## Recommendation
 

@@ -14,7 +14,7 @@ recommends: drop-after-three-silent-timeouts-fixed
 
 One of the seven known defects ("warts") your goals say to clean up first. It is listed as "the map block's handler set never shrinks", but the map block itself is not where the gap is.
 
-The map block sorts messages by key and creates one handler per new key. It already has `removeHandler(key)`, which removes a handler and tells the factory to destroy it; a test pins that. What is missing is anyone calling it. The ping-pong block (the library's connection keep-alive, built on a map block keyed by peer) never does: its map block is private, so a host cannot either. Every peer that ever sent one message keeps its handler forever, and for a peer that has gone away for good, the timer sends it a ping every time it checks, forever. Over a long-running UDP server that is a slow memory leak plus a growing stream of pings to nobody.
+The map block sorts messages by key and creates one handler per new key. It already has `removeHandler(key)`, which removes a handler and tells the factory to destroy it; a test pins that. What is missing is anyone calling it. The ping-pong block (the library's connection keep-alive, built on a map block keyed by peer) never does: its map block is private, so a host cannot either. Every peer that ever sent one message keeps its handler forever, and for a peer that has gone away for good, the timer keeps sending it a ping, at most once per timeout, forever (in FirstTest's setup, every check). Over a long-running UDP server that is a slow memory leak plus a growing stream of pings to nobody.
 
 The protocol interface already has `destroyHandler`, so removal was clearly intended; it was just never wired up.
 
