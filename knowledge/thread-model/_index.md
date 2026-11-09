@@ -1,6 +1,7 @@
 ---
 type: project-node
-summary: "The settled thread-domain model: only ThreadBlock owns a thread, blocking lives in get/put, and stop() completes only when the worker is parked in an interruptible get() — pinned by the J3 tests."
+summary: "The settled thread-domain model: only ThreadBlock owns a thread, blocking lives in get/put, and stop() waits for the in-flight put then exits the worker for every input kind (J4; v0.2.0 deadlocked) — pinned by the characterization tests."
+verified: 2026-11-09
 related:
   - path: ..
     rationale: The orientation names this node as the thread-domain model, crystallized after J3.
@@ -8,7 +9,8 @@ related:
 
 # Thread model
 
-Settled by the J3 characterization tests (2026-08-26); each fact below
+Settled by the J3 characterization tests (2026-08-26), the stop()
+contract updated by the J4 fix (2026-11-09); each fact below
 is pinned by a test that has been proven able to fail. The tests are
 the executable form of this node — change them and this text together.
 
@@ -27,29 +29,35 @@ the executable form of this node — change them and this text together.
   the key, and `handler.put` runs outside the map lock, so handlers
   for different keys can execute concurrently.
 
-## The stop() contract (v0.2.0, warts pinned as-is)
+## The stop() contract (J4, 2026-11-09)
 
-`stop()` is `synchronized`, waits `while (doingOutput) wait(5000)`,
-then interrupts and `join()`s **still holding the block's monitor** —
-which the worker needs for its post-put `synchronized(this){notifyAll()}`.
-Consequences, all pinned in `ThreadBlockCharacterizationTest` and the
-timer tests:
+`stop()` takes the block's monitor only to raise a `stopping` flag,
+wait until no `put` is in flight, and interrupt the worker; it then
+**joins outside the monitor**. The worker checks `stopping` after each
+completed `put`, and resets `running` whenever it ends. Pinned in
+`ThreadBlockCharacterizationTest` and the timer tests:
 
-- `stop()` completes **only** when the worker is parked inside an
-  *interruptible* `get()` (a buffer): the interrupt makes the get
-  throw and the loop exits without touching the monitor.
-- With any input whose `get()` survives the interrupt (`ConstantBlock`
-  — it never blocks; `DelayFunction` on either side; the UDP socket),
-  `stop()` never returns: it either keeps observing
-  `doingOutput == true` in 5 s rounds, or wins the microsecond window
-  and deadlocks in `join()`. Every later `isRunning()` then blocks
-  too. **The library's own timer idiom (`FirstTest`) is unstoppable.**
-- A `RuntimeException` from downstream kills the worker while
-  `isRunning()` stays true and `stop()` hangs (`doingOutput` never
-  resets). In v0.2.0 a downstream throw is, in fact, the only way to
-  end a Constant-fed worker.
-- `stop()` does honour the in-flight item: it returns only after a
-  blocked `put` completes, and the item is delivered, not dropped.
+- `stop()` returns only after an in-flight `put` completes, and the
+  item is delivered, not dropped (unchanged from v0.2.0).
+- A worker parked in an *interruptible* `get()` (a buffer) exits at
+  once. One inside a `get()` that survives the interrupt
+  (`ConstantBlock`, `DelayFunction` on either side, the UDP socket)
+  finishes that get, delivers that one item, and exits — stop is
+  prompt, not instant. The timer idiom (`FirstTest`) is stoppable.
+- The interrupt aimed at the `get()` is cleared before the item is put,
+  so a stale interrupt never aborts that put.
+- `isRunning()` never blocks behind `stop()`, and turns false when the
+  worker ends for any reason. A downstream `RuntimeException` still
+  kills the worker (rethrown, wrapped), but the block then reports
+  stopped and `stop()` returns at once.
 
-Whether and how to fix this is the owner's call:
-`decisions/2026-09-23-fix-thread-block-stop.md`.
+**Still open:** `DelayFunction` swallows interrupts and always sleeps
+the full delay (J3 wart 3) — the reason stop is prompt rather than
+instant for timers. Its own ruled step, if ever.
+
+**History:** in v0.2.0 `stop()` joined while holding the monitor the
+worker needed for its post-put `notifyAll()`, so it completed only when
+the worker was parked in an interruptible `get()`; otherwise it
+re-waited in 5 s rounds or deadlocked, and a dead worker kept reporting
+running. Ruled fixed in `decisions/2026-09-23-fix-thread-block-stop.md`;
+the change and its tests are J4 in `design/decision-log.md`.

@@ -6,20 +6,20 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Characterizes {@code v0.2.0} ThreadBlock behaviour, warts included.
+ * Characterizes ThreadBlock behaviour: {@code v0.2.0}, with the stop() fix ruled in J4.
  * ThreadBlock is the only thread owner; its loop is {@code output.put(input.get())}.
  *
- * <p>The stop() contract this pins: stop() completes only when the worker is parked inside an
- * interruptible get() (a buffer). Otherwise it never returns — either it keeps observing
- * doingOutput == true and re-waits in 5 s rounds, or it sees false, interrupts, and then
- * join()s while holding the block's monitor, which the worker needs for its post-put
- * notifyAll(): a deadlock that also blocks every later isRunning() call. Tests that leave a
- * worker deadlocked leave a non-daemon thread behind; surefire exits regardless.
+ * <p>The stop() contract this pins (J4): stop() waits for an in-flight put to complete, then
+ * interrupts the worker and joins it without holding the block's monitor. A worker parked in an
+ * interruptible get() (a buffer) exits at once; one inside a get() that survives the interrupt
+ * finishes that get, delivers that item, and exits. isRunning() never blocks and turns false
+ * when the worker ends for any reason, including a downstream exception.
  */
 class ThreadBlockCharacterizationTest
 {
@@ -147,11 +147,12 @@ class ThreadBlockCharacterizationTest
 	}
 
 	/**
-	 * Wart: stop() join()s while holding the monitor. A worker whose get() does not throw on
-	 * interrupt comes back to put, then blocks forever on the monitor for its notifyAll().
+	 * J4: a worker whose get() does not throw on interrupt finishes that get, delivers the item,
+	 * and exits; stop() waits for it without holding the monitor, so isRunning() stays answerable.
+	 * (v0.2.0 deadlocked here: stop() joined while holding the monitor the worker needed.)
 	 */
 	@Test
-	void stopDeadlocksWithAWorkerWhoseGetSurvivesTheInterrupt() throws InterruptedException
+	void stopWaitsForAnUninterruptibleGetThenDeliversTheItemAndReturns() throws InterruptedException
 	{
 		CountDownLatch release = new CountDownLatch(1);
 		Input<String> uninterruptible = () ->
@@ -174,27 +175,62 @@ class ThreadBlockCharacterizationTest
 		thread.setOutput(out);
 		thread.setDebugReporter(BasicBlocks.getTrashcanBlock());
 		thread.start();
-		Thread.sleep(100); // worker is inside get(), doingOutput == false
+		Thread.sleep(100); // worker is inside get()
 
-		Thread stopper = Async.daemon(thread::stop); // sees false, sets running = false, interrupts, joins with the lock held
-		assertTrue(Async.stillRunningAfter(stopper, 200));
-		release.countDown(); // get returns; the worker puts, then needs the monitor
+		Thread stopper = Async.daemon(thread::stop);
+		assertTrue(Async.stillRunningAfter(stopper, 200), "stop waits: the get swallowed the interrupt");
+		Thread asker = Async.daemon(thread::isRunning);
+		assertTrue(Async.finishesWithin(asker, 300), "isRunning() does not block behind stop()");
+		assertTrue(thread.isRunning(), "still running until the worker exits");
 
-		assertTrue(out.receivedWithin(1, 1000), "the item still goes through");
-		Thread worker = out.threads().getFirst();
-		assertTrue(Async.becomesTrueWithin(() -> worker.getState() == Thread.State.BLOCKED, 1000),
-				"worker is blocked on the monitor stop() holds");
-		assertTrue(Async.stillRunningAfter(stopper, 300), "stop() never returns");
-		assertTrue(Async.stillRunningAfter(Async.daemon(thread::isRunning), 300), "and isRunning() blocks behind it");
+		release.countDown(); // get returns; the worker puts, sees the stop, exits
+		assertTrue(Async.finishesWithin(stopper, 1000), "stop() returns");
+		assertEquals(List.of("item"), out.items(), "the item in hand is delivered, not dropped");
+		assertFalse(thread.isRunning());
+		assertFalse(out.threads().getFirst().isAlive(), "the worker has exited");
 	}
 
 	/**
-	 * Wart: a RuntimeException from downstream kills the worker thread (rethrown, uncaught),
-	 * but the block still reports running, and stop() never returns because doingOutput
-	 * was never reset. This test leaves a daemon thread parked in stop().
+	 * J4: the interrupt stop() aims at a get() that ignores it must not abort the put of the item
+	 * that get() returns: the worker puts into a full buffer, stop() waits for that put, and the
+	 * item arrives once the buffer has room.
 	 */
 	@Test
-	void downstreamExceptionKillsTheWorkerButTheBlockStillReportsRunningAndStopHangs() throws InterruptedException
+	void theInterruptAimedAtTheGetDoesNotAbortThePutThatFollows() throws InterruptedException
+	{
+		AtomicBoolean released = new AtomicBoolean();
+		Input<String> ignoresInterrupts = () ->
+		{
+			while (!released.get()) Thread.onSpinWait(); // never looks at the interrupt flag, like ConstantBlock
+			return "item";
+		};
+		BufferBlock<String> out = BasicBlocks.getBufferBlock(1);
+		out.put("x"); // downstream is full: the worker's put will block
+		ThreadBlock<String> thread = BasicBlocks.getThreadBlock();
+		thread.setInput(ignoresInterrupts);
+		thread.setOutput(out);
+		thread.setDebugReporter(BasicBlocks.getTrashcanBlock());
+		thread.start();
+		Thread.sleep(100); // worker is inside get()
+
+		Thread stopper = Async.daemon(thread::stop); // interrupts the get, which ignores it: the flag stays set
+		assertTrue(Async.stillRunningAfter(stopper, 200));
+		released.set(true); // get returns "item" with the interrupt still pending; the put blocks on the full buffer
+		assertTrue(Async.stillRunningAfter(stopper, 300), "stop waits for the put, which was not aborted");
+
+		assertEquals("x", out.get()); // free the slot
+		assertTrue(Async.finishesWithin(stopper, 1000), "stop returns once the put has completed");
+		assertEquals(1, out.getLoad(), "the item was delivered");
+		assertEquals("item", out.get());
+	}
+
+	/**
+	 * J4: a RuntimeException from downstream still kills the worker (rethrown, uncaught), but the
+	 * block now reports stopped and stop() returns at once. (v0.2.0 kept reporting running and
+	 * stop() hung, because the in-flight flag was never reset.)
+	 */
+	@Test
+	void downstreamExceptionKillsTheWorkerAndTheBlockReportsStopped() throws InterruptedException
 	{
 		BufferBlock<Integer> in = BasicBlocks.getBufferBlock(1);
 		AtomicInteger attempts = new AtomicInteger();
@@ -210,14 +246,13 @@ class ThreadBlockCharacterizationTest
 
 		in.put(1);
 		assertTrue(Async.becomesTrueWithin(() -> attempts.get() == 1, 1000));
-		Thread.sleep(100);
+		assertTrue(Async.becomesTrueWithin(() -> !thread.isRunning(), 1000), "reports stopped once the worker died");
 		in.put(2); // nobody is consuming any more: the worker is dead
 		Thread.sleep(100);
 		assertEquals(1, in.getLoad(), "the second item is never taken");
 		assertEquals(1, attempts.get(), "the worker did not survive the exception");
-		assertTrue(thread.isRunning(), "wart: still reports running after the worker died");
 
 		Thread stopper = Async.daemon(thread::stop);
-		assertTrue(Async.stillRunningAfter(stopper, 1000), "wart: stop() never returns");
+		assertTrue(Async.finishesWithin(stopper, 1000), "stop() on a dead worker returns at once");
 	}
 }

@@ -140,3 +140,56 @@ default reporters printing `INFO:`/`DEBUG:` to stdout on every put is
 `setDebugReporter`. **Named revival trigger:** the reporter-singleton
 cleanup step (already on the list), which is where a test-time
 reporter belongs.
+
+## J4 — `ThreadBlock.stop()` fixed minimally: every ThreadBlock is stoppable (owner ruling, 2026-11-09; carried out by autopilot run 1)
+
+Carries out `decisions/2026-09-23-fix-thread-block-stop.md`, ruled
+**fix stop() minimally** (Tog, 2026-11-09). J3 warts 1 and 2 are fixed;
+wart 3 (`DelayFunction` swallows interrupts) is deliberately left for its
+own step.
+
+**What changed, and only in `ThreadBlockImpl`:**
+
+- `stop()` no longer holds the block's monitor while it `join()`s. It
+  takes the monitor only to raise a `stopping` flag, wait until no
+  `put` is in flight, and interrupt; then it releases the monitor and
+  joins. The worker's post-put handshake can therefore never deadlock
+  against it, and `isRunning()` never blocks behind a stop.
+- The worker's loop checks `stopping` after each completed `put`, so a
+  worker fed by an input whose `get()` survives the interrupt
+  (`ConstantBlock`, `DelayFunction`, the socket) finishes that get and
+  delivers that one item, then exits. Stop is prompt, not instant.
+- An interrupt aimed at the `get()` is cleared (under the monitor)
+  before the item is put, so the item in hand is delivered rather than
+  lost to a stale interrupt.
+- When the worker ends for any reason — stopped, or killed by a
+  downstream exception — it resets `running` (and the in-flight flag)
+  before it dies. `isRunning()` tells the truth and `stop()` on a dead
+  worker returns at once. A downstream exception still kills the worker
+  and is still rethrown wrapped in a `RuntimeException`, as in v0.2.0.
+
+**Unchanged:** the steady-state data path (`output.put(input.get())`
+on one worker thread), back-pressure, restartability, the setters'
+rules, and `stop()` returning only after an in-flight `put` completes
+with the item delivered — all still pinned by the untouched J3 tests.
+
+**Tests flipped in the same commit** (each now pins termination instead
+of the hang; the old assertions are gone because the behaviour is):
+`ThreadBlockCharacterizationTest.stopDeadlocksWithAWorkerWhoseGetSurvivesTheInterrupt`
+→ `stopWaitsForAnUninterruptibleGetThenDeliversTheItemAndReturns`;
+`downstreamExceptionKillsTheWorkerButTheBlockStillReportsRunningAndStopHangs`
+→ `downstreamExceptionKillsTheWorkerAndTheBlockReportsStopped`; and the
+two timer tests in `FunctionBlocksCharacterizationTest`
+(`…PushSideDelayTicksAndCanBeStopped`,
+`…PullSideDelay…TicksOnceMoreAfterStopThenStops`). The ruling's record
+counted three; it is four because the downstream-exception test pins
+wart 2, which the ruled option ("reset state when the worker dies")
+also fixes. Each flipped test was proven able to fail: against the
+v0.2.0 `ThreadBlockImpl`, exactly those four go red.
+
+**One test added**, `theInterruptAimedAtTheGetDoesNotAbortThePutThatFollows`,
+pinning the interrupt-clearing line (no existing test caught its
+removal). The suite is now **35** tests. Four one-line mutations of the
+new code each turned tests red and were reverted: interrupt not
+cleared (the new test), `join()` back inside the monitor, `running`
+not reset when the worker ends, the loop ignoring `stopping`.

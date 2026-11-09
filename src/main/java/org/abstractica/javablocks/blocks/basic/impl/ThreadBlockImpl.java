@@ -13,7 +13,8 @@ public class ThreadBlockImpl<E>
     private Output<E> output;
     private Thread workerThread;
     private volatile boolean running;
-    private volatile boolean doingOutput;
+    private volatile boolean stopping;
+    private boolean doingOutput; // guarded by this
 
 
     public ThreadBlockImpl()
@@ -27,31 +28,55 @@ public class ThreadBlockImpl<E>
     @Override
     public void run()
     {
-        while (running)
+        try
         {
-            try
+            while (!stopping)
             {
-                DEBUG("Trying to get!");
-                E item = input.get();
-                DEBUG("Got: " + item);
-                doingOutput = true;
-                DEBUG("Trying to put!");
-                output.put(item);
-                DEBUG("Put: " + item);
-                doingOutput = false;
+                E item;
+                try
+                {
+                    DEBUG("Trying to get!");
+                    item = input.get();
+                    DEBUG("Got: " + item);
+                } catch (InterruptedException e)
+                {
+                    continue; // stop() interrupts a blocked get; the loop condition decides
+                }
                 synchronized (this)
                 {
-                    this.notifyAll();
+                    doingOutput = true;
+                    Thread.interrupted(); // an interrupt aimed at the get must not abort this put
                 }
-            } catch (InterruptedException e)
-            {
-                //Do nothing, let 'stopped' do its work...
-            } catch (Exception e)
-            {
-                if(running)
+                try
                 {
-                    throw new RuntimeException(e);
+                    DEBUG("Trying to put!");
+                    output.put(item);
+                    DEBUG("Put: " + item);
+                } catch (InterruptedException e)
+                {
+                    //Do nothing, as before: the loop condition decides
+                } finally
+                {
+                    synchronized (this)
+                    {
+                        doingOutput = false;
+                        this.notifyAll();
+                    }
                 }
+            }
+        } catch (RuntimeException e)
+        {
+            if (!stopping)
+            {
+                throw new RuntimeException(e);
+            }
+        } finally
+        {
+            synchronized (this)
+            {
+                running = false;
+                doingOutput = false;
+                this.notifyAll();
             }
         }
     }
@@ -65,21 +90,27 @@ public class ThreadBlockImpl<E>
             throw new IllegalStateException("Worker may only be started if both input and output are connected!");
         }
         running = true;
+        stopping = false;
         workerThread = new Thread(this);
         workerThread.start();
     }
 
     @Override
-    public synchronized void stop() throws InterruptedException
+    public void stop() throws InterruptedException
     {
-        if(!running) return;
-        while (doingOutput)
+        Thread worker;
+        synchronized (this)
         {
-            wait(5000);
+            if(!running) return;
+            stopping = true;
+            while (doingOutput)
+            {
+                wait();
+            }
+            worker = workerThread;
+            worker.interrupt();
         }
-        running = false;
-        workerThread.interrupt();
-        workerThread.join();
+        worker.join(); // outside the monitor: the worker's handshake never waits on a stopper
     }
 
     @Override
