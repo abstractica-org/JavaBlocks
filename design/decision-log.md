@@ -443,4 +443,5 @@ the public names (package, types, methods, the kinds' names); how a
 Design names the Java functions and host objects it uses (the
 catalogue); and the map block's per-key handler slot. Every public name
 is the owner's (delegation). Code starts with the next J entry, after
-the names are ruled.
+the names and the catalogue are ruled; the map node waits for its own
+ruling.
