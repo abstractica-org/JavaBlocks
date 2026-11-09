@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-how-should-a-host-control-the-blocks
 title: "How should a host control the blocks' log output?"
-status: ruled
+status: done
 stakes: medium
 confidence: 75
 opened: 2026-11-09
@@ -73,3 +73,7 @@ The reporters stay fixed; hosts quiet blocks one at a time. Runs move on to the 
 ## Ruling
 
 **Settable defaults, output unchanged** (`settable-defaults-output-unchanged`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 3: `Reporter` gained `setDefaultInfoReporter`, `setDefaultDebugReporter` and `setDefaultErrorReporter` (null = silent, not retroactive), with the default output unchanged (J10); today's defaults pinned first, the new test `aSetDefaultReachesBlocksBuiltAfterItAndNotBefore` proven red with each setter disabled. Debug-off-by-default and build-time reporters remain open for later rulings.
