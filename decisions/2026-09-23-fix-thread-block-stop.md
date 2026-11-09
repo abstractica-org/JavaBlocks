@@ -1,7 +1,7 @@
 ---
 id: 2026-09-23-fix-thread-block-stop
 title: Fix ThreadBlock.stop() — it deadlocks or never returns unless the worker is parked in an interruptible get()
-status: ruled
+status: done
 stakes: medium
 confidence: 80
 opened: 2026-09-23
@@ -115,3 +115,7 @@ this record again.
 ## Ruling
 
 **Fix stop() minimally** (`fix-stop-minimally`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09 — carried out by autopilot run 1 as J4: `stop()` joins outside the monitor and the worker exits after its in-flight put for every input kind; four tests flipped to pin termination, two added; 36 green.

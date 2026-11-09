@@ -145,3 +145,4 @@ The migration is finished and the pull request is open for your review: **https:
 
 SessionEnd (other) — ended without hibernate. The scope was popped by the session-end hook; nothing here was handed over. The next wakeup runs the crystallizer over this log.
 
+<!-- crystallized: 2026-11-09 by d60b5023-7996-4e1a-baac-b7fff965cdfb -->

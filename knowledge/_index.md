@@ -1,7 +1,7 @@
 ---
 type: project-node
 summary: "Open at the start of any JavaBlocks work — a plain-Java dataflow library where blocks wire by handing references, only `ThreadBlock` owns a thread and only `BufferBlock` holds back-pressure; the tree holds this orientation and the thread-model node."
-verified: 2026-09-23
+verified: 2026-11-09
 ---
 
 # JavaBlocks
@@ -43,7 +43,7 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   `assemblies/`, `blocks/udp/`, `blocks/connection/` (the ping-pong
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
   runnable check), `examples/`, `reporter/`.
-- `src/test/` — the 34 J3 characterization tests.
+- `src/test/` — the characterization tests (34 from J3, 36 after J4).
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.
@@ -57,8 +57,9 @@ assessment beside it. Neither is duplicated here.
 
 ## What this tree holds
 
-- `thread-model/` — the settled thread-domain model and the v0.2.0
-  `stop()` contract, crystallized from the J3 characterization tests.
+- `thread-model/` — the settled thread-domain model and the
+  `stop()` contract, crystallized from the J3 characterization tests
+  and updated for the J4 fix.
 
 Candidate once it is settled: the shape of the declarative assembly
 once the owner has ruled it.

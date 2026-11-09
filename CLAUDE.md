@@ -4,9 +4,10 @@ A block programming approach for multithreaded pipelines — a plain Java
 library of push/pull/thread/buffer/map blocks wired into dataflow
 pipelines.
 
-**Status (verified 2026-09-23):** `v0.2.1` — the `v0.2.0` code
-(`3076b2a`, 2025-01-17), byte for byte, pinned by 34 characterization
-tests (J3) on the real pom (J2:
+**Status (verified 2026-11-09):** `v0.2.1` — the `v0.2.0` code
+(`3076b2a`, 2025-01-17) pinned by characterization tests (J3) — on
+`main` since then, one ruled cleanup: `ThreadBlock.stop()` (J4), 36
+tests — on the real pom (J2:
 `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5). No CI.
 The owner works on several machines, so `origin/main` may trail your
 checkout — check `git log origin/main..main` first.
@@ -32,13 +33,11 @@ checkout — check `git log origin/main..main` first.
   fail (J3) — keep it that way.
 - **Cleanup is its own logged step.** The known warts — handler set
   never shrinks, non-volatile handler timestamps, unsynchronized
-  `MapBlock.getSize`, the reporter singletons; and from J3: `stop()`
-  deadlocks or never returns unless the worker is parked in an
-  interruptible `get()` (the timer idiom is unstoppable), a downstream
-  exception kills the worker while `isRunning()` stays true,
+  `MapBlock.getSize`, the reporter singletons; and from J3:
   `DelayFunction` swallows interrupts, capacity-0 buffers block every
   put, the distributor forwards under its monitor — are fixed one at a time,
-  each ruled by the owner, never in passing; a fix buried in a feature
+  each ruled by the owner, never in passing (the `stop()` deadlock and
+  the dead-worker-still-running wart were fixed this way in J4); a fix buried in a feature
   commit cannot be reverted alone.
 - **Owner designs the outside.** The declarative assembly's shape is the
   one design decision here; propose, the owner rules, then build the

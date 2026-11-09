@@ -5,7 +5,6 @@ import org.abstractica.javablocks.testsupport.Sink;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -84,25 +83,17 @@ class FunctionBlocksCharacterizationTest
 	}
 
 	/**
-	 * The library's timer idiom as FirstTest wires it (delay on the push side): it ticks, and it
-	 * cannot be stopped. stop() either keeps observing doingOutput == true (the get() is
-	 * instantaneous, so the window is microseconds) and re-waits in 5 s rounds, or catches the
-	 * window and deadlocks on join() — see ThreadBlockCharacterizationTest. Either way it never
-	 * returns, and whether ticks continue afterwards depends on which path it took. The test ends
-	 * a still-ticking worker the only way v0.2.0 allows: a downstream RuntimeException kills it.
+	 * The library's timer idiom as FirstTest wires it (delay on the push side): it ticks, and since
+	 * J4 it can be stopped. stop() waits for the tick in flight (the delayed put), then the worker
+	 * sees the stop and exits; no tick arrives after stop() returns. (v0.2.0 never returned here:
+	 * it re-waited in 5 s rounds or deadlocked on join().)
 	 */
 	@Test
-	void constantPlusThreadPlusPushSideDelayTicksAndCannotBeStopped() throws InterruptedException
+	void constantPlusThreadPlusPushSideDelayTicksAndCanBeStopped() throws InterruptedException
 	{
-		AtomicBoolean poison = new AtomicBoolean();
 		Sink<Long> ticks = new Sink<>();
-		Output<Long> sink = item ->
-		{
-			if (poison.get()) throw new IllegalStateException("test over: killing the unstoppable worker");
-			ticks.put(item);
-		};
 		PushBlock<Long, Long> delay = BasicBlocks.getPushBlock(BasicFunctions.DelayFunction(100));
-		delay.setOutput(sink);
+		delay.setOutput(ticks);
 		delay.setDebugReporter(BasicBlocks.getTrashcanBlock());
 		ThreadBlock<Long> thread = BasicBlocks.getThreadBlock();
 		thread.setInput(BasicBlocks.getConstantBlock(1L));
@@ -115,23 +106,22 @@ class FunctionBlocksCharacterizationTest
 		assertEquals(1, ticks.threads().stream().distinct().count(), "all ticks on the worker thread");
 
 		Thread stopper = Async.daemon(thread::stop);
-		assertTrue(Async.stillRunningAfter(stopper, 1500), "stop() never returns");
-
-		poison.set(true);
-		Thread.sleep(400);
-		int afterPoison = ticks.items().size();
+		assertTrue(Async.finishesWithin(stopper, 1000), "stop() returns after at most the tick in flight");
+		assertFalse(thread.isRunning());
+		assertFalse(ticks.threads().getFirst().isAlive(), "the worker has exited");
+		int atReturn = ticks.items().size();
 		Thread.sleep(300);
-		assertEquals(afterPoison, ticks.items().size(), "no ticks once the worker is dead or deadlocked");
+		assertEquals(atReturn, ticks.items().size(), "no ticks after stop() returned");
 	}
 
 	/**
-	 * The same idiom with the delay on the pull side. The worker sits inside get() with
-	 * doingOutput == false, so stop() proceeds immediately — the interrupt is swallowed by the
-	 * delay, the worker delivers the tick in flight, and then deadlocks on the monitor stop()
-	 * holds in join(). Deterministic: exactly one tick after stop() is called, then silence.
+	 * The same idiom with the delay on the pull side. The worker sits inside get() (the delay's
+	 * sleep, which swallows the interrupt), so it finishes that delay, delivers that one tick, sees
+	 * the stop, and exits. Deterministic: exactly one tick after stop() is called, then stop()
+	 * returns. (v0.2.0 delivered the same tick and then deadlocked on the monitor.)
 	 */
 	@Test
-	void constantPlusPullSideDelayPlusThreadTicksOnceMoreAfterStopThenDeadlocks() throws InterruptedException
+	void constantPlusPullSideDelayPlusThreadTicksOnceMoreAfterStopThenStops() throws InterruptedException
 	{
 		Sink<Long> ticks = new Sink<>();
 		PullBlock<Long, Long> delay = BasicBlocks.getPullBlock(BasicFunctions.DelayFunction(100));
@@ -148,8 +138,9 @@ class FunctionBlocksCharacterizationTest
 		int atStop = ticks.items().size();
 
 		Thread stopper = Async.daemon(thread::stop);
-		assertTrue(Async.stillRunningAfter(stopper, 1000), "stop() never returns");
+		assertTrue(Async.finishesWithin(stopper, 1000), "stop() returns");
 		assertEquals(atStop + 1, ticks.items().size(), "exactly the tick in flight is delivered");
-		assertEquals(Thread.State.BLOCKED, worker.getState(), "worker is deadlocked on the monitor");
+		assertFalse(worker.isAlive(), "the worker has exited");
+		assertFalse(thread.isRunning());
 	}
 }
