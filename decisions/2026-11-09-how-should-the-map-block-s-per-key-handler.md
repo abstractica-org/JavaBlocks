@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-how-should-the-map-block-s-per-key-handler
 title: "How should the map block's per-key handler slot be filled in a pipeline Design?"
-status: proposed
+status: ruled
 stakes: medium
 confidence: 80
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: 184507c0-5a81-4fd6-9d06-8dee2a5ba320
 recommends: a-nested-design-copied-once-per-key
@@ -76,3 +77,7 @@ A nested Design, copied once per key. Your goals ruling read literally ("handler
 ## If nothing is decided
 
 The rest of the builder can still be built once the names and catalogue records are ruled; the map node waits, and goal 2 cannot be called done without it.
+
+## Ruling
+
+**A nested Design, copied once per key** (`a-nested-design-copied-once-per-key`). Tog, 2026-11-09, from the project pages.
