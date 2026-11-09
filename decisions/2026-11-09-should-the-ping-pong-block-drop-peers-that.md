@@ -18,7 +18,7 @@ The map block sorts messages by key and creates one handler per new key. It alre
 
 The protocol interface already has `destroyHandler`, so removal was clearly intended; it was just never wired up.
 
-Today the timer sends a ping when a peer has been quiet longer than the timeout and no ping went out within the timeout. The question is when, if ever, a quiet peer should be dropped, and who decides how long "too long" is. The ping-pong classes have no tests today; whichever fix is chosen comes with tests of its own, proven able to fail, and a design-log entry first.
+Today the timer sends a ping when a peer has been quiet longer than the timeout and no ping went out within the timeout. The question is when, if ever, a quiet peer should be dropped, and who decides how long "too long" is. The ping-pong classes have no tests today, so the order is: first pin today's behaviour (a silent peer keeps its handler and keeps being pinged), then make the fix as a visible change to that test, proven able to fail, and a design-log entry first.
 
 ## Options
 

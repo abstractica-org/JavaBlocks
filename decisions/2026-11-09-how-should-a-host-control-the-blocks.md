@@ -14,11 +14,11 @@ recommends: settable-defaults-output-unchanged
 
 One of the seven known defects ("warts") your goals say to clean up first: "the reporter singletons".
 
-Every block can report INFO, DEBUG and ERROR messages. When a block is built it takes three reporters from the `Reporter` class: one shared INFO printer and one shared DEBUG printer to standard output, and one ERROR printer to standard error. Three switches in that class (`infoOn`, `debugOn`, `errorOn`) are hard-coded to on, and the lookup methods take the block as an argument but ignore it. So every thread block prints four DEBUG lines per item it moves, every buffer prints INFO when full, and the only way to quiet a block is to call `setDebugReporter(...)` on each block one by one. A host cannot turn logging down, or send it to its own logger, for the whole library. The tests quiet blocks one at a time for this reason (J3 ruled out silencing them globally and named this cleanup as where a test-time reporter belongs).
+Every block can report INFO, DEBUG and ERROR messages. When a block is built it takes three reporters from the `Reporter` class: one shared INFO printer and one shared DEBUG printer to standard output, and one ERROR printer to standard error. Three switches in that class (`infoOn`, `debugOn`, `errorOn`) are hard-coded to on, and the lookup methods take the block as an argument but ignore it. So every thread block prints four DEBUG lines per item it moves, a buffer larger than one slot prints INFO each time a put finds it full, and the only way to quiet a block is to call `setDebugReporter(...)` on each block one by one. A host cannot turn logging down, or send it to its own logger, for the whole library. The tests quiet blocks one at a time for this reason (J3 ruled out silencing them globally and named this cleanup as where a test-time reporter belongs).
 
 The foundation's guidance for Java libraries (the `java-library` skill this project uses) is that a library is composed, not configured: the host owns configuration. Printing debug lines to stdout on every message, with no switch, works against that.
 
-Any fix adds or changes public API (the Reporter class), so it is yours to rule.
+Any fix adds or changes public API (the Reporter class), so it is yours to rule. Whichever is chosen, a test pins it first: a block built after the default is changed reports to the new reporter, one built before keeps the old one.
 
 ## Options
 

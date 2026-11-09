@@ -49,7 +49,7 @@ There is a catch: these are plain Java `Function`s, which cannot throw `Interrup
 - Smallest change: timing is exactly as today, only the interrupt is no longer lost for code after the delay.
 
 **Cons:**
-- stop() still waits out the full delay, which is the part hosts actually feel.
+- stop() still waits out the remaining delay, which is the part hosts actually feel.
 - Has the same risk as returning early (a full buffer downstream refuses the item), without the benefit.
 
 ### Leave it as it is
@@ -63,7 +63,7 @@ There is a catch: these are plain Java `Function`s, which cannot throw `Interrup
 
 ## Recommendation
 
-Return early and keep the flag. It is the standard Java answer for code that cannot throw, it makes stopping prompt where it is slow today, and with the thread block it keeps today's 'the tick in flight is delivered once' rule, so the change is small and visible in one test. Aborting is more literal but throws from a plain Function, which surprises callers outside a thread block. The same fix would apply to both delay functions, in one commit, since they share the defect. Confidence 78 — the choice between early return and abort is a real one about what 'stop a timer' should mean to you.
+Return early and keep the flag. It is the standard Java answer for code that cannot throw, it makes stopping prompt where it is slow today, and with the thread block it keeps today's 'the tick in flight is delivered once' rule, so the change is small and visible in one test. Aborting is more literal but throws from a plain Function, which surprises callers outside a thread block. The same fix would apply to both delay functions, in one commit, since they share the defect; the random delay has no test today, so a test pinning its current interrupt-swallowing goes in first, and both tests then change visibly with the fix. Confidence 78 — the choice between early return and abort is a real one about what 'stop a timer' should mean to you.
 
 ## If nothing is decided
 
