@@ -12,18 +12,18 @@ recommends: a-nested-design-copied-once-per-key
 
 ## Problem
 
-The map block is JavaBlocks' most distinctive piece: it sorts incoming messages by a key (for example, which peer sent them) and creates a separate handler the first time it sees a new key, so one design runs as N copies, with N decided by the traffic at run time. Today the handler comes from a Java factory object with three methods: read the key from a message, create a handler for a key, destroy a handler. Your goals ruling says the assembly has "the map block's per-key handler factory as a fill-in slot". Your words can be read two ways. Read literally, the slot is filled with a factory, and J1 (the charter) says the assembly builds "through the factories that already exist (… the handler factories)". But J1 also rejected reading pipelines back from running code because "the map block's handler wiring is buried in factory bodies", which a viewer cannot see. This record decides what fills that slot in a Design. (The names record proposes the words; the catalogue record decides how Java functions get names in the data.)
+The map block is JavaBlocks' most distinctive piece: it sorts incoming messages by a key (for example, which peer sent them) and creates a separate handler the first time it sees a new key, so one design runs as N copies, with N decided by the traffic at run time. Today the handler comes from a Java factory object with three methods: read the key from a message, create a handler for a key, destroy a handler. Your goals ruling says the assembly has "the map block's per-key handler factory as a fill-in slot". Your words can be read two ways. Read literally, the slot is filled with a factory, and J1 (the charter) says the assembly builds "through the factories that already exist (… the handler factories)". But J1 also rejected reading pipelines back from running code because "the map block's handler wiring is buried in factory bodies", which a viewer cannot see. The form record you ruled already sketched the map as `a.map("peers", keyFn, perKey -> { ... })`, "a nested design, one copy per key", and left its details to this record; the factory reading is still open, so both are set out below. This record decides what fills that slot in a Design. (The names record proposes the words; the catalogue record decides how Java functions get names in the data.)
 
 Two facts from the code. First, only the ping-pong block uses a map block today, and inside itself, so rebuilding FirstTest and the UDP examples (goal 2's "done") needs a `pingPong` kind but no map node; the slot is for hosts and for the viewer. Second, the map creates a handler while holding its lock, on the thread whose message first carried the key, and destroying a handler happens when someone calls removeHandler (as the ping-pong block now does for silent peers, J11).
 
 What the recommended option looks like, a handler per peer that prints with its key:
 
   var peers = d.map("peers", (String msg) -> msg.split(":")[0], perKey -> {
-      var show = perKey.hostSink("show", key -> new SimpleHandler(key));  // one object per key
+      var show = perKey.hostSinkPerKey("show", key -> new SimpleHandler(key));  // one object per key
       perKey.wire(perKey.entry(), show.in());  // entry(): this key's messages
   });
 
-In the data, the map node's setting holds a small nested Design with one boundary port, `entry`. The words `perKey`, `entry()` and a `hostSink` that takes a function of the key are this record's own proposals, ruled together with it. Anything inside it that depends on the key is given as a function of the key (a catalogue entry). For each new key the map builds a fresh copy of the nested Design and starts its thread blocks; when the handler is removed, the copy's threads are stopped and its sockets closed.
+In the data, the map node's setting holds a small nested Design with one boundary port, `entry`. The words `perKey`, `entry()` and `hostSinkPerKey` (a host object made from the key; a separate name, because a lambda could also be read as a plain `Output`) are this record's own proposals, ruled together with it. Anything inside it that depends on the key is given as a function of the key (a catalogue entry). For each new key the map builds a fresh copy of the nested Design and starts its thread blocks; when the handler is removed, the copy's threads are stopped and its sockets closed.
 
 ## Options
 
@@ -38,6 +38,7 @@ In the data, the map node's setting holds a small nested Design with one boundar
 **Cons:**
 - The largest of the options: copying, starting and tearing down sub-pipelines.
 - A handler with threads is started under the map's lock on the putting thread, and stopping it on removal waits for its in-flight put (J4); both are visible costs that need tests.
+- Stopping the whole pipeline must also stop every live per-key copy, and cope with a new key arriving while it stops, since the map creates handlers on whichever thread puts.
 - No block combines two inputs, so the key reaches the inside only through functions of the key, not as a wire.
 
 ### A factory object from the catalogue
