@@ -49,7 +49,7 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   `assemblies/`, `blocks/udp/`, `blocks/connection/` (the ping-pong
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
   runnable check), `examples/`, `reporter/`.
-- `src/test/` — the characterization tests (34 from J3, 36 after J4, 42 after J5–J11).
+- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11).
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.

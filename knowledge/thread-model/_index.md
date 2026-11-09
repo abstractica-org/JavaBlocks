@@ -69,8 +69,9 @@ completed `put`, and resets `running` whenever it ends. Pinned in
   orders; an output added mid-forward misses that item, one removed
   mid-forward still gets it.
 - The ping-pong timer drops a peer silent for more than three timeouts
-  through `MapBlock.removeHandler` (J11); the handler's timestamps are
-  `volatile` (J7).
+  through `MapBlock.removeHandler` (J11), before it would ping it, so
+  ticks must come no further apart than about 2 × timeout or quiet
+  peers are dropped unasked; the handler's timestamps are `volatile` (J7).
 
 **History:** in v0.2.0 `stop()` joined while holding the monitor the
 worker needed for its post-put `notifyAll()`, so it completed only when

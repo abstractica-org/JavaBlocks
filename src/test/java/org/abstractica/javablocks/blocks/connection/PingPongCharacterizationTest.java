@@ -90,6 +90,15 @@ class PingPongCharacterizationTest
 		assertEquals(List.of("silent:hello"), protocol.destroyed.getFirst().items(), "the destroyed handler was the silent peer's");
 	}
 
+	/** J11: the factor is fixed at 3, as ruled. The timing test above cannot tell 3 from 2 or 4 reliably. */
+	@Test
+	void theDropFactorIsThree() throws ReflectiveOperationException
+	{
+		java.lang.reflect.Field factor = PingPongBlockImpl.class.getDeclaredField("SILENT_TIMEOUTS_BEFORE_DROP");
+		factor.setAccessible(true);
+		assertEquals(3L, factor.getLong(null));
+	}
+
 	/**
 	 * J7: the timestamps cross threads (receiver writes, timer reads), so both are volatile. A stale
 	 * read cannot be provoked reliably, so the declaration is what is pinned.

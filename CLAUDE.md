@@ -7,7 +7,7 @@ pipelines.
 **Status (verified 2026-11-09):** `v0.2.1` — the `v0.2.0` code
 (`3076b2a`, 2025-01-17) pinned by characterization tests (J3) — on
 `main` since then, the eight ruled cleanups: `ThreadBlock.stop()` (J4)
-and the seven known warts (J5–J11), 42 tests — on the real pom (J2:
+and the seven known warts (J5–J11), 43 tests — on the real pom (J2:
 `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5). No CI.
 The owner works on several machines, so `origin/main` may trail your
 checkout — check `git log origin/main..main` first.

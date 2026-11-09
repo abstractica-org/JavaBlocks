@@ -395,7 +395,11 @@ handler can draw one spurious ping; that is unchanged.
 
 **Accepted consequences (the record named them):** a peer silent that
 long but still alive loses its handler's state; a message arriving at the
-moment of removal may reach the handler being destroyed.
+moment of removal may reach the handler being destroyed. Found in review:
+the drop is checked before the ping, so a host whose ticks come more than
+3 × timeout apart drops a quiet peer without ever pinging it; the
+keep-alive needs ticks no further apart than about 2 × timeout (FirstTest
+ticks every 2 × timeout).
 
 **Test flipped in the same commit:**
 `PingPongCharacterizationTest.aSilentPeerKeepsItsHandlerAndIsPingedForever`
@@ -404,7 +408,9 @@ moment of removal may reach the handler being destroyed.
 at least one ping, then its handler is destroyed exactly once and the
 pings stop; a peer that keeps talking is never pinged or dropped; the
 silent peer's next message creates a fresh handler. Proven able to fail
-against the old timer connector. The `-1` guard has no test that fails
+against the old timer connector. That timing test cannot tell a factor of
+3 from 2 or 4, so `theDropFactorIsThree` pins the constant structurally
+(found in review). The `-1` guard has no test that fails
 without it: the window lies between `MapBlock` releasing its lock and the
 new handler's first `put`, and nothing outside the block can hold a
 thread there (the same limit J4 recorded for two of its guards).
