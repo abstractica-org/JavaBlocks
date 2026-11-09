@@ -118,4 +118,4 @@ this record again.
 
 ## Done
 
-2026-11-09 — carried out by autopilot run 1 as J4: `stop()` joins outside the monitor and the worker exits after its in-flight put for every input kind; four tests flipped to pin termination, one added; 35 green.
+2026-11-09 — carried out by autopilot run 1 as J4: `stop()` joins outside the monitor and the worker exits after its in-flight put for every input kind; four tests flipped to pin termination, two added; 36 green.

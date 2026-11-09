@@ -46,9 +46,14 @@ completed `put`, and resets `running` whenever it ends. Pinned in
   prompt, not instant. The timer idiom (`FirstTest`) is stoppable.
 - The interrupt aimed at the `get()` is cleared before the item is put,
   so a stale interrupt never aborts that put.
+- `stop()` stops the run it was called on; a `start()` during a
+  pending stop is a no-op (and the setters throw), but one that wins
+  the race after the old worker exits starts a new run that `stop()`
+  leaves alone. `stop()` from the worker thread itself hangs.
 - `isRunning()` never blocks behind `stop()`, and turns false when the
   worker ends for any reason. A downstream `RuntimeException` still
-  kills the worker (rethrown, wrapped), but the block then reports
+  kills the worker (rethrown, wrapped — also while a stop waits for that
+  put; only a failure after stop's interrupt is swallowed), but the block then reports
   stopped and `stop()` returns at once.
 
 **Still open:** `DelayFunction` swallows interrupts and always sleeps

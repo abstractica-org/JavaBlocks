@@ -6,7 +6,7 @@ pipelines.
 
 **Status (verified 2026-11-09):** `v0.2.1` — the `v0.2.0` code
 (`3076b2a`, 2025-01-17) pinned by characterization tests (J3) — on
-`main` since then, one ruled cleanup: `ThreadBlock.stop()` (J4), 35
+`main` since then, one ruled cleanup: `ThreadBlock.stop()` (J4), 36
 tests — on the real pom (J2:
 `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5). No CI.
 The owner works on several machines, so `origin/main` may trail your

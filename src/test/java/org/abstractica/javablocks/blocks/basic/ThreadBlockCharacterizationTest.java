@@ -225,6 +225,58 @@ class ThreadBlockCharacterizationTest
 	}
 
 	/**
+	 * J4: stop() stops the run it was called on. If start() begins a new run while stop() waits
+	 * for the in-flight put, stop() still returns once the old worker has exited, and leaves the
+	 * new run alone. The interleaving is a race, so it is tried many times.
+	 */
+	@Test
+	void aStartDuringAPendingStopDoesNotHangTheStop() throws InterruptedException
+	{
+		for (int trial = 0; trial < 50; trial++)
+		{
+			CountDownLatch putMayFinish = new CountDownLatch(1);
+			AtomicInteger puts = new AtomicInteger();
+			Output<Integer> slowFirstPut = item ->
+			{
+				if (puts.getAndIncrement() == 0) putMayFinish.await();
+			};
+			BufferBlock<Integer> in = BasicBlocks.getBufferBlock(1);
+			ThreadBlock<Integer> thread = BasicBlocks.getThreadBlock();
+			thread.setInput(in);
+			thread.setOutput(slowFirstPut);
+			thread.setDebugReporter(BasicBlocks.getTrashcanBlock());
+			thread.start();
+			in.put(1);
+			assertTrue(Async.becomesTrueWithin(() -> puts.get() == 1, 1000), "the put is in flight");
+
+			Thread stopper = Async.daemon(thread::stop);
+			assertTrue(Async.stillRunningAfter(stopper, 20), "stop waits for the in-flight put");
+			Thread starter = Async.daemon(() ->
+			{
+				while (true)
+				{
+					synchronized (thread) // races stop() for the monitor the moment the old worker ends
+					{
+						if (!thread.isRunning())
+						{
+							thread.start();
+							return;
+						}
+					}
+					Thread.onSpinWait();
+				}
+			});
+			putMayFinish.countDown();
+
+			assertTrue(Async.finishesWithin(stopper, 1000), "trial " + trial + ": stop() returns");
+			assertTrue(Async.finishesWithin(starter, 1000), "trial " + trial + ": the new run started");
+			assertTrue(thread.isRunning(), "trial " + trial + ": the new run is left running");
+			thread.stop(); // the new worker is parked in the empty buffer's get()
+			assertFalse(thread.isRunning());
+		}
+	}
+
+	/**
 	 * J4: a RuntimeException from downstream still kills the worker (rethrown, uncaught), but the
 	 * block now reports stopped and stop() returns at once. (v0.2.0 kept reporting running and
 	 * stop() hung, because the in-flight flag was never reset.)

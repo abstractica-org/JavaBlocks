@@ -14,6 +14,7 @@ public class ThreadBlockImpl<E>
     private Thread workerThread;
     private volatile boolean running;
     private volatile boolean stopping;
+    private volatile boolean interruptedByStop;
     private boolean doingOutput; // guarded by this
 
 
@@ -66,7 +67,7 @@ public class ThreadBlockImpl<E>
             }
         } catch (RuntimeException e)
         {
-            if (!stopping)
+            if (!interruptedByStop) // as v0.2.0: only a failure after stop's interrupt is swallowed
             {
                 throw new RuntimeException(e);
             }
@@ -91,6 +92,7 @@ public class ThreadBlockImpl<E>
         }
         running = true;
         stopping = false;
+        interruptedByStop = false;
         workerThread = new Thread(this);
         workerThread.start();
     }
@@ -102,13 +104,17 @@ public class ThreadBlockImpl<E>
         synchronized (this)
         {
             if(!running) return;
+            worker = workerThread; // the run this call stops, even if start() begins another while it waits
             stopping = true;
-            while (doingOutput)
+            while (doingOutput && workerThread == worker)
             {
                 wait();
             }
-            worker = workerThread;
-            worker.interrupt();
+            if (workerThread == worker)
+            {
+                interruptedByStop = true;
+                worker.interrupt();
+            }
         }
         worker.join(); // outside the monitor: the worker's handshake never waits on a stopper
     }

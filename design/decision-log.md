@@ -168,6 +168,24 @@ own step.
   worker returns at once. A downstream exception still kills the worker
   and is still rethrown wrapped in a `RuntimeException`, as in v0.2.0.
 
+- `stop()` stops the run it was called on: it notes the worker before
+  it waits, and afterwards interrupts and joins only that worker. If
+  `start()` begins a new run while `stop()` waits, the new run is left
+  alone and `stop()` still returns (found by the fresh review: re-reading
+  the worker after the wait made `stop()` join the new worker forever).
+- As in v0.2.0, a downstream exception from the in-flight `put` while
+  `stop()` waits is still rethrown; only a failure after `stop()`'s
+  interrupt is swallowed. (Not pinned by a test: an uncaught exception
+  on the internal worker thread is not observable without a global
+  handler.)
+
+**Side effects on shutdown, accepted:** while a stop is pending,
+`running` stays true until the worker exits, so a `start()` in that
+window is a no-op and `setInput`/`setOutput` throw
+`IllegalStateException`; in v0.2.0 they queued behind the monitor
+`stop()` held and then went through. Calling `stop()` from the worker
+thread itself still hangs, as it did in v0.2.0.
+
 **Unchanged:** the steady-state data path (`output.put(input.get())`
 on one worker thread), back-pressure, restartability, the setters'
 rules, and `stop()` returning only after an in-flight `put` completes
@@ -187,9 +205,11 @@ wart 2, which the ruled option ("reset state when the worker dies")
 also fixes. Each flipped test was proven able to fail: against the
 v0.2.0 `ThreadBlockImpl`, exactly those four go red.
 
-**One test added**, `theInterruptAimedAtTheGetDoesNotAbortThePutThatFollows`,
+**Two tests added**: `theInterruptAimedAtTheGetDoesNotAbortThePutThatFollows`,
 pinning the interrupt-clearing line (no existing test caught its
-removal). The suite is now **35** tests. Four one-line mutations of the
+removal), and `aStartDuringAPendingStopDoesNotHangTheStop` (50 trials of
+the race; it fails against the first draft of this fix). The suite is
+now **36** tests. Four one-line mutations of the
 new code each turned tests red and were reverted: interrupt not
 cleared (the new test), `join()` back inside the monitor, `running`
 not reset when the worker ends, the loop ignoring `stopping`.

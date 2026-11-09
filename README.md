@@ -21,7 +21,7 @@ runtime, everything built through static factories such as
 **Active** — version 0.2.1 is the 0.2.0 code pinned by
 characterization tests that describe its concurrency behaviour. Since
 then, on `main`, the first cleanup: every thread block can now be
-stopped (35 tests). Next come further one-at-a-time cleanups and a
+stopped (36 tests). Next come further one-at-a-time cleanups and a
 declarative way to assemble pipelines. (2026-11-09)
 
 ## Quick start
