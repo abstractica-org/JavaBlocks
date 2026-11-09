@@ -333,3 +333,37 @@ commit before this one, since the random delay had no test) →
 `randomDelayFunctionReturnsEarlyOnAnInterruptAndKeepsTheFlag`. Each
 proven able to fail: against the old code (late return), and against a
 fix that returns early but drops the flag.
+
+## J10 — a host can set the default reporters; output unchanged (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-how-should-a-host-control-the-blocks.md`,
+ruled **settable defaults, output unchanged**. Known wart "the reporter
+singletons": every block takes its INFO, DEBUG and ERROR reporters from
+`Reporter`'s hard-wired defaults when it is built, and the only way to
+quiet or redirect the library was block by block.
+
+**Change — public API addition, as ruled:** three static setters on
+`Reporter`: `setDefaultInfoReporter`, `setDefaultDebugReporter`,
+`setDefaultErrorReporter`, each taking an `Output<String>`; `null` means
+silent (blocks already skip a null reporter). Blocks built after the call
+pick up the new default; blocks built before keep what they have (not
+retroactive, as the record said). The default fields are `volatile`, so
+a setter called on one thread is seen by blocks built on another.
+Nothing a host sees changes unless it calls a setter: the defaults still
+print exactly as before. The names are the run's choice within the
+ruling (they mirror the existing `defaultInfoReporter` fields and the
+existing `getInfoReporter(Block)` lookups, which are unchanged).
+
+Still open, as the record says, for later rulings: whether debug should
+be off by default, and passing reporters in at build time (belongs with
+the declarative assembly).
+
+**Tests:** `ReporterCharacterizationTest.everyNewBlockStartsWithTheSharedDefaultReporters`
+pinned today's defaults in the commit before this one and stays green;
+new `aSetDefaultReachesBlocksBuiltAfterItAndNotBefore` (a recording
+default, then `null` for silent, restoring the originals after). Proven
+able to fail with a setter that does not store its argument.
+
+*Rejected:* using the setters to quiet the whole test run (J3's rejected
+alternative). Tests that must stay quiet still use the block's own
+setter; the new test restores the defaults it changes.
