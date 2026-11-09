@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-what-should-the-delay-functions-do-when
 title: What should the delay functions do when their thread is interrupted?
-status: proposed
+status: ruled
 stakes: medium
 confidence: 78
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: eba163f7-4766-4239-b515-dcd76034fa77
 recommends: return-early-and-keep-the-flag
@@ -68,3 +69,7 @@ Return early and keep the flag. It is the standard Java answer for code that can
 ## If nothing is decided
 
 The delays keep swallowing interrupts; stopping an input-side timer keeps taking up to its full delay. Runs move on to the other cleanups; goal 1 cannot be called done until this is ruled.
+
+## Ruling
+
+**Return early and keep the flag** (`return-early-and-keep-the-flag`). Tog, 2026-11-09, from the project pages.
