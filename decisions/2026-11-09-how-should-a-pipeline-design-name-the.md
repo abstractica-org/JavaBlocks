@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-how-should-a-pipeline-design-name-the
 title: How should a pipeline Design name the Java functions and host objects it uses?
-status: proposed
+status: ruled
 stakes: medium
 confidence: 82
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: 184507c0-5a81-4fd6-9d06-8dee2a5ba320
 recommends: names-in-the-design-objects-in-a-catalogue-the-builder-fills-both
@@ -78,3 +79,7 @@ Names in the Design, objects in a catalogue, with the builder filling both. It i
 ## If nothing is decided
 
 Nothing that needs a function (push, pull, if, ping-pong) can be put into a Design, so the builder is not started. Runs do housekeeping only.
+
+## Ruling
+
+**Names in the Design, objects in a catalogue; the builder fills both** (`names-in-the-design-objects-in-a-catalogue-the-builder-fills-both`). Tog, 2026-11-09, from the project pages.
