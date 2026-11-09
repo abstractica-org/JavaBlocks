@@ -114,3 +114,34 @@ Work carefully and briefly; this run is paid from Tog's pool.
 - bash: cd $KNOWLEDGE_FOUNDATION_PATH/infrastructure/decide && sed -n 20,60p decide; sed -n 115,125p test_decide.py; sed -n 150, …
 - bash: cat > /tmp/jb-deleg.py <<'PYEOF' …
 - bash: python3 - <<'EOF' …
+- bash: cat > /tmp/jb-report.md <<'EOF' …
+- bash: git status -sb | head -1; gh pr view 5 --json baseRefName,headRefName,state
+
+## Assistant — 09:42:31
+
+The migration is finished and the pull request is open for your review: **https://github.com/abstractica-org/JavaBlocks/pull/5** (`migrate-20261109-0940` → `main`). The branch is pushed and the PR is open, and none of the project's code, tests or build files were changed. The one step I couldn't do is the last: the permission settings blocked writing the status line to `~/.local/state/project-driver/jobs/javablocks/status`. That file should say `AUTOPILOT: done — https://github.com/abstractica-org/JavaBlocks/pull/5`. You or the scheduler will need to write it, or allow that directory.
+
+**What changed**
+- **`README.md`:** rewritten in the standard shape: what the library is, Status, a quick start taken from one of its own examples, and links. The old two-line README was moved word for word to `docs/original-readme.md` and is linked first.
+- **`decisions/`:** the two existing records used the old "Buys/Costs" lines. They now use Pros/Cons lists with the original wording, nothing added or removed. Neither is ruled yet, so there was nothing to carry out.
+- **`knowledge/_index.md`:** the list of where the code lives had wrong package paths and still called the build file a template. Both are corrected.
+- **`STARTUP.md`:** a note at the top that the project was migrated, and the delegation question added to what's waiting on you.
+- The scheduler's setup step had added nothing, so there was nothing of its to review.
+
+**`kt check`:** it failed before on the README's shape (71 passed, 1 failed, 1 warning). It now passes with one warning (72 passed). The warning is two session logs not yet processed into the knowledge tree; the next interactive wakeup handles them.
+
+**Waiting on you**
+- **The delegation:** `decisions/2026-11-09-approve-the-autopilot-delegation-for-javablocks.md`. I recommend approving it as drafted (confidence 80). Under it, an unattended run could:
+  - tidy the docs and knowledge tree;
+  - add tests;
+  - carry out decisions you have already made;
+  - open pull requests.
+
+  Any behaviour change you haven't decided, any change to the public API, releases, dependency changes and merges would still come to you. The project stays parked until you answer.
+- **The `stop()` fix:** whether to fix `ThreadBlock.stop()`, which can hang or deadlock. The record recommends a minimal fix.
+- **The diverged working copy:** this was already handled on 2026-09-23 as the record recommended. It only needs you to close it.
+
+## System — 09:42:31
+
+SessionEnd (other) — ended without hibernate. The scope was popped by the session-end hook; nothing here was handed over. The next wakeup runs the crystallizer over this log.
+
