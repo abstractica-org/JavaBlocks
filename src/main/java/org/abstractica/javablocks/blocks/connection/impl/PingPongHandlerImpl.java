@@ -13,8 +13,8 @@ public class PingPongHandlerImpl<Key, E, Handler extends Output<E>>
 	private final Output<E> pongSender;
 	private final Handler msgHandler;
 
-	private long lastMessageReceivedTime;
-	private long lastPingSentTime;
+	private volatile long lastMessageReceivedTime;
+	private volatile long lastPingSentTime;
 
 	public PingPongHandlerImpl( Key key,
 								PingPongProtocol<Key, E, Handler> protocol,
