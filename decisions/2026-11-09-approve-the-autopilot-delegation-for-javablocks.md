@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-approve-the-autopilot-delegation-for-javablocks
 title: Approve the autopilot delegation for javablocks
-status: ruled
+status: done
 stakes: medium
 confidence: 80
 opened: 2026-11-09
@@ -98,3 +98,7 @@ The project stays parked. Nothing breaks: the v0.2.1 code and its tests stand, a
 ## Ruling
 
 **Approve as drafted** (`approve-as-drafted`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09 — the ruling wrote `tools/autopilot/DELEGATION.md` word for word from the draft (commit `05bd4d5`); the migration run verified the file and closed the record. Driven runs may now work in this project within it.
