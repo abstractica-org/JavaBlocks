@@ -6,8 +6,8 @@ pipelines.
 
 **Status (verified 2026-11-09):** `v0.2.1` — the `v0.2.0` code
 (`3076b2a`, 2025-01-17) pinned by characterization tests (J3) — on
-`main` since then, one ruled cleanup: `ThreadBlock.stop()` (J4), 36
-tests — on the real pom (J2:
+`main` since then, the eight ruled cleanups: `ThreadBlock.stop()` (J4)
+and the seven known warts (J5–J11), 42 tests — on the real pom (J2:
 `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5). No CI.
 The owner works on several machines, so `origin/main` may trail your
 checkout — check `git log origin/main..main` first.
@@ -31,14 +31,13 @@ checkout — check `git log origin/main..main` first.
   checks them. A behaviour change is a visible test change in the same
   commit, with a log entry saying why. Every test was proven able to
   fail (J3) — keep it that way.
-- **Cleanup is its own logged step.** The known warts — handler set
-  never shrinks, non-volatile handler timestamps, unsynchronized
-  `MapBlock.getSize`, the reporter singletons; and from J3:
-  `DelayFunction` swallows interrupts, capacity-0 buffers block every
-  put, the distributor forwards under its monitor — are fixed one at a time,
-  each ruled by the owner, never in passing (the `stop()` deadlock and
-  the dead-worker-still-running wart were fixed this way in J4); a fix buried in a feature
-  commit cannot be reverted alone.
+- **Cleanup is its own logged step.** Every known wart was fixed one at
+  a time, each ruled by the owner, never in passing: the `stop()`
+  deadlock and dead worker (J4), then `MapBlock.getSize` (J5),
+  capacity-0 buffers (J6), ping-pong timestamps (J7), the distributor's
+  lock (J8), delay interrupts (J9), the reporter defaults (J10), silent
+  ping-pong peers (J11). A newly found wart goes the same way; a fix
+  buried in a feature commit cannot be reverted alone.
 - **Owner designs the outside.** The declarative assembly's shape is the
   one design decision here; propose, the owner rules, then build the
   insides.

@@ -1,6 +1,6 @@
 ---
 type: project-node
-summary: "The settled thread-domain model: only ThreadBlock owns a thread, blocking lives in get/put, and stop() waits for the in-flight put then exits the worker for every input kind (J4; v0.2.0 deadlocked) — pinned by the characterization tests."
+summary: "The settled thread model: only ThreadBlock owns a thread, blocking lives in get/put, stop() waits for the in-flight put then exits for every input kind (J4), and where map, distributor and ping-pong lock (J5–J11) — all pinned by tests."
 verified: 2026-11-09
 related:
   - path: ..
@@ -10,7 +10,7 @@ related:
 # Thread model
 
 Settled by the J3 characterization tests (2026-08-26), the stop()
-contract updated by the J4 fix (2026-11-09); each fact below
+contract updated by the J4 fix and the J5–J11 cleanups (2026-11-09); each fact below
 is pinned by a test that has been proven able to fail. The tests are
 the executable form of this node — change them and this text together.
 
@@ -41,9 +41,12 @@ completed `put`, and resets `running` whenever it ends. Pinned in
   item is delivered, not dropped (unchanged from v0.2.0).
 - A worker parked in an *interruptible* `get()` (a buffer) exits at
   once. One inside a `get()` that survives the interrupt
-  (`ConstantBlock`, `DelayFunction` on either side, the UDP socket)
-  finishes that get, delivers that one item, and exits — stop is
-  prompt, not instant. The timer idiom (`FirstTest`) is stoppable.
+  (`ConstantBlock`, the UDP socket) finishes that get, delivers that
+  one item, and exits — stop is prompt, not instant. A delay function
+  on the input side returns early on the interrupt and keeps the flag
+  (J9), so the worker delivers the item in hand at once and exits. The
+  timer idiom (`FirstTest`, delay on the output side) is stoppable;
+  there stop() waits for the in-flight delayed put.
 - The interrupt aimed at the `get()` is cleared before the item is put,
   so a stale interrupt never aborts that put.
 - `stop()` stops the run it was called on; a `start()` during a
@@ -56,9 +59,18 @@ completed `put`, and resets `running` whenever it ends. Pinned in
   put; only a failure after stop's interrupt is swallowed), but the block then reports
   stopped and `stop()` returns at once.
 
-**Still open:** `DelayFunction` swallows interrupts and always sleeps
-the full delay (J3 wart 3) — the reason stop is prompt rather than
-instant for timers. Its own ruled step, if ever.
+## Where the other blocks lock (J5, J8, J11)
+
+- `MapBlock` takes its lock for every access to the handler map,
+  `getSize()` included (J5), and never while a handler's `put` runs.
+- `DistributorBlock.put` forwards from a snapshot of its outputs,
+  outside its lock (J8): a slow output blocks neither add/remove nor
+  other producers; with several producers, outputs may see different
+  orders; an output added mid-forward misses that item, one removed
+  mid-forward still gets it.
+- The ping-pong timer drops a peer silent for more than three timeouts
+  through `MapBlock.removeHandler` (J11); the handler's timestamps are
+  `volatile` (J7).
 
 **History:** in v0.2.0 `stop()` joined while holding the monitor the
 worker needed for its post-put `notifyAll()`, so it completed only when
