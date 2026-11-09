@@ -133,3 +133,4 @@ I wrote `AUTOPILOT: done — <PR URL>` to the status file. This run's session lo
 
 SessionEnd (other) — ended without hibernate. The scope was popped by the session-end hook; nothing here was handed over. The next wakeup runs the crystallizer over this log.
 
+<!-- crystallized: 2026-11-09 by d60b5023-7996-4e1a-baac-b7fff965cdfb -->
