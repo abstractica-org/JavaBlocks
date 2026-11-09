@@ -12,7 +12,7 @@ recommends: a-nested-design-copied-once-per-key
 
 ## Problem
 
-The map block is JavaBlocks' most distinctive piece: it sorts incoming messages by a key (for example, which peer sent them) and creates a separate handler the first time it sees a new key, so one design runs as N copies, with N decided by the traffic at run time. Today the handler comes from a Java factory object with three methods: read the key from a message, create a handler for a key, destroy a handler. Your goals ruling says the assembly has "the map block's per-key handler factory as a fill-in slot". J1 (the charter) gave the reason the assembly exists: a viewer cannot see the map's handler wiring when it is buried inside a factory's Java code. This record decides what fills that slot in a Design. (The names record proposes the words; the catalogue record decides how Java functions get names in the data.)
+The map block is JavaBlocks' most distinctive piece: it sorts incoming messages by a key (for example, which peer sent them) and creates a separate handler the first time it sees a new key, so one design runs as N copies, with N decided by the traffic at run time. Today the handler comes from a Java factory object with three methods: read the key from a message, create a handler for a key, destroy a handler. Your goals ruling says the assembly has "the map block's per-key handler factory as a fill-in slot". Your words can be read two ways. Read literally, the slot is filled with a factory, and J1 (the charter) says the assembly builds "through the factories that already exist (… the handler factories)". But J1 also rejected reading pipelines back from running code because "the map block's handler wiring is buried in factory bodies", which a viewer cannot see. This record decides what fills that slot in a Design. (The names record proposes the words; the catalogue record decides how Java functions get names in the data.)
 
 Two facts from the code. First, only the ping-pong block uses a map block today, and inside itself, so rebuilding FirstTest and the UDP examples (goal 2's "done") needs a `pingPong` kind but no map node; the slot is for hosts and for the viewer. Second, the map creates a handler while holding its lock, on the thread whose message first carried the key, and destroying a handler happens when someone calls removeHandler (as the ping-pong block now does for silent peers, J11).
 
@@ -23,7 +23,7 @@ What the recommended option looks like, a handler per peer that prints with its 
       perKey.wire(perKey.entry(), show.in());  // entry(): this key's messages
   });
 
-In the data, the map node's setting holds a small nested Design with one boundary port, `entry`. Anything inside it that depends on the key is given as a function of the key (a catalogue entry). For each new key the map builds a fresh copy of the nested Design and starts its thread blocks; when the handler is removed, the copy's threads are stopped and its sockets closed.
+In the data, the map node's setting holds a small nested Design with one boundary port, `entry`. The words `perKey`, `entry()` and a `hostSink` that takes a function of the key are this record's own proposals, ruled together with it. Anything inside it that depends on the key is given as a function of the key (a catalogue entry). For each new key the map builds a fresh copy of the nested Design and starts its thread blocks; when the handler is removed, the copy's threads are stopped and its sockets closed.
 
 ## Options
 
@@ -48,7 +48,7 @@ In the data, the map node's setting holds a small nested Design with one boundar
 
 **Cons:**
 - The viewer sees the map as a closed box: the handler wiring stays buried in Java, which is what J1 set out to fix.
-- The goals ruling's fill-in slot becomes a Java hook rather than a design.
+- The slot holds Java code, so a viewer can choose a factory from the catalogue but not draw or edit what it builds.
 
 ### Factory object now, nested Design later
 
@@ -70,7 +70,7 @@ In the data, the map node's setting holds a small nested Design with one boundar
 
 ## Recommendation
 
-A nested Design, copied once per key. It is the only option that does what J1 and your goals ruling ask: the per-key wiring becomes something the viewer can see and edit. It also covers the factory case, because an existing handler class becomes one per-key host object. The factory-only option is smaller but leaves the map a closed box, which is the reason the assembly exists. Factory-now-nested-later saves work in goal 2 only to add a second public form of the same slot later. The costs (starting under the lock, stopping waits) are the existing thread-model rules, and would be pinned by tests like every other behaviour. I would build the map node last within goal 2, after the kinds FirstTest and the UDP examples need. Confidence 80: the direction follows from J1. The detail I am least sure of is passing the key in only as functions of the key, and building it may show a better way, which would come back to you.
+A nested Design, copied once per key. Your goals ruling read literally ("handler factory as a fill-in slot") fits the factory option as well, and that option is the honest smaller alternative. I still recommend the nested Design because it is the only one that answers J1's objection: the per-key wiring becomes something the viewer can see and edit, not a factory body. It also covers the factory case, because an existing handler class becomes one per-key host object. The factory-only option is smaller but leaves the map a closed box, which is the reason the assembly exists. Factory-now-nested-later saves work in goal 2 only to add a second public form of the same slot later. The costs (starting under the lock, stopping waits) are the existing thread-model rules, and would be pinned by tests like every other behaviour. I would build the map node last within goal 2, after the kinds FirstTest and the UDP examples need. Confidence 80: the direction follows from J1's objection, but if by "factory" you meant exactly today's factory object, the second option is yours to pick. The detail I am least sure of is passing the key in only as functions of the key, and building it may show a better way, which would come back to you.
 
 ## If nothing is decided
 
