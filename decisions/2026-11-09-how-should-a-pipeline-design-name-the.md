@@ -27,7 +27,7 @@ What the recommended option looks like:
 
 A Design whose names the catalogue lacks is refused at build time, naming the missing entries.
 
-The same goes for the value held by a constant or variable block when it is not plain data (a number or a string is stored as itself; a `DatagramPacket` is stored as a catalogue name). The words `Catalogue`, `catalogue()` and the named form `push(id, name, fn)` are this record's own proposals, ruled together with it.
+The value held by a constant or variable block is stored by name too when it is not plain data (a number or a string is stored as itself; a `DatagramPacket` is stored as a catalogue name). The words `Catalogue`, `catalogue()` and the named form `push(id, name, fn)` (the same for pull, if and ping-pong) are this record's own proposals, ruled together with it.
 
 ## Options
 

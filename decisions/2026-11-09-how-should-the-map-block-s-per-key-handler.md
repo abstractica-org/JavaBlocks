@@ -23,7 +23,7 @@ What the recommended option looks like, a handler per peer that prints with its 
       perKey.wire(perKey.entry(), show.in());  // entry(): this key's messages
   });
 
-In the data, the map node's setting holds a small nested Design with one boundary port, `entry`. The words `perKey`, `entry()` and `hostSinkPerKey` (a host object made from the key; a separate name, because a lambda could also be read as a plain `Output`) are this record's own proposals, ruled together with it. Anything inside it that depends on the key is given as a function of the key (a catalogue entry). For each new key the map builds a fresh copy of the nested Design and starts its thread blocks; when the handler is removed, the copy's threads are stopped and its sockets closed.
+In the data, the map node's setting holds a small nested Design with one boundary port, `entry`. The words `perKey`, `entry()` and `hostSinkPerKey` (a host object made from the key; a separate name, because a lambda could also be read as a plain `Output`; its kind in the data is `hostSinkPerKey` too) are this record's own proposals, ruled together with it. Anything inside it that depends on the key is given as a function of the key (a catalogue entry). For each new key the map builds a fresh copy of the nested Design and starts its thread blocks; when the handler is removed, the copy's threads are stopped and its sockets closed.
 
 ## Options
 
