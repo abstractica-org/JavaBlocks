@@ -24,7 +24,11 @@ JavaBlocks pipelines rather than only draw them.
 first the known warts, each fixed or ruled to stay, one ruling each
 (`decisions/2026-11-09-*.md`); then the declarative assembly; then the
 viewer adapter, which waits for `wiring-playground`'s graph contract.
-The base is clean before any public API is built on it.
+The base is clean before any public API is built on it. Goal 1 is
+done: every known wart was fixed under its own ruling (J4–J11, merged
+2026-11-09). Goal 2's form is ruled — a Design as plain data with a
+typed Java builder on top (J12); its names, how Java functions are
+named in a Design, and the map block's per-key slot are open records.
 
 ## The model in one paragraph
 
