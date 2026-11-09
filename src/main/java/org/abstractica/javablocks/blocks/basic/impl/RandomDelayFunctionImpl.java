@@ -26,7 +26,12 @@ public class RandomDelayFunctionImpl<E> implements Function<E, E>
             try
             {
                 Thread.sleep(delayMillis-elapsed);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e)
+            {
+                // A Function cannot throw it: keep the flag for the caller and return early (J9).
+                Thread.currentThread().interrupt();
+                return item;
+            }
             elapsed = System.currentTimeMillis() - start;
         }
         return item;
