@@ -251,3 +251,20 @@ its caller's size through, now fails at construction too.
 `capacityBelowOneIsRefusedAtConstruction` (0 and -1 both throw
 `IllegalArgumentException`). The old assertion is gone because the
 behaviour is. Proven able to fail: without the check, the new test is red.
+
+## J7 — the ping-pong handler's timestamps are `volatile` (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-ping-pong-handler-s-timestamps-be-made.md`,
+ruled **mark both fields volatile**. Known wart "non-volatile handler
+timestamps": `PingPongHandlerImpl.lastMessageReceivedTime` is written by
+the thread delivering messages and read by the timer thread;
+`lastPingSentTime` is public through the handler interface. As plain
+`long`s, Java promised neither visibility of the latest write nor an
+untorn read on a 32-bit JVM.
+
+**Change:** both fields are `volatile`. Nothing else.
+
+**Test:** new `PingPongCharacterizationTest.handlerTimestampsAreVolatile`,
+a structural check by reflection — a stale read cannot be provoked
+reliably on a 64-bit JVM, so the record ruled that the declaration is
+what gets pinned. Proven able to fail: removing either keyword turns it red.
