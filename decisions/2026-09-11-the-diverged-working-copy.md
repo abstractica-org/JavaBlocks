@@ -1,10 +1,11 @@
 ---
 id: 2026-09-11-the-diverged-working-copy
 title: This repository's working copy and its trunk have each moved without the other
-status: proposed
+status: ruled
 stakes: medium
 confidence: 82
 opened: 2026-09-11
+ruled: 2026-11-09
 repo: javablocks
 by: 8f2bda13
 recommends: read-the-two-local-commits-then-rebase-onto-main
@@ -113,3 +114,7 @@ The two histories keep drifting. The characterisation test suite exists
 on one machine only and is not backed up anywhere. The next session here
 starts by spending fifteen minutes working out which `main` it is looking
 at, or does not notice and loses one side.
+
+## Ruling
+
+**Read the two local commits, then rebase onto main** (`read-the-two-local-commits-then-rebase-onto-main`). Tog, 2026-11-09, from the project pages.
