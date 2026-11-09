@@ -82,6 +82,22 @@ class FunctionBlocksCharacterizationTest
 		assertEquals("x", result.get());
 	}
 
+	/** Wart: the random delay absorbs interrupts too (range [200, 201) ms, so the delay is 200 ms). */
+	@Test
+	void randomDelayFunctionAbsorbsInterruptsAndDelaysTheFullTime() throws InterruptedException
+	{
+		Function<String, String> delay = BasicFunctions.getRandomDelayFunction(200, 201);
+		AtomicReference<String> result = new AtomicReference<>();
+		long start = System.nanoTime();
+		Thread t = Async.daemon(() -> result.set(delay.apply("x")));
+		Thread.sleep(20);
+		t.interrupt();
+		assertTrue(Async.finishesWithin(t, 2000));
+		long elapsedMillis = (System.nanoTime() - start) / 1_000_000;
+		assertTrue(elapsedMillis >= 200, "returned after " + elapsedMillis + " ms despite the interrupt");
+		assertEquals("x", result.get());
+	}
+
 	/**
 	 * The library's timer idiom as FirstTest wires it (delay on the push side): it ticks, and since
 	 * J4 it can be stopped. stop() waits for the tick in flight (the delayed put), then the worker
