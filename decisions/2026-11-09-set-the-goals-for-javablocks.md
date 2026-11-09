@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-set-the-goals-for-javablocks
 title: Set the goals for javablocks
-status: ruled
+status: done
 stakes: medium
 confidence: 82
 opened: 2026-11-09
@@ -80,3 +80,7 @@ Runs keep to housekeeping and the rulings you have already made. With the stop()
 ## Ruling
 
 **Cleanups first, then the assembly** (`cleanups-first-then-the-assembly`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09 (run 2): `tools/autopilot/GOALS.md` written from the ruling — cleanups first, then the assembly, then the viewer adapter, each with its "done" from this record.
