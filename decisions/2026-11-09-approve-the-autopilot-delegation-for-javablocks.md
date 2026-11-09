@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-approve-the-autopilot-delegation-for-javablocks
 title: Approve the autopilot delegation for javablocks
-status: proposed
+status: ruled
 stakes: medium
 confidence: 80
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: d6bac86a
 recommends: approve-as-drafted
@@ -93,3 +94,7 @@ Approve as drafted. The draft lets runs do only what is cheap to undo (housekeep
 ## If nothing is decided
 
 The project stays parked. Nothing breaks: the v0.2.1 code and its tests stand, and interactive sessions work as before. Rulings made from the pages wait for one.
+
+## Ruling
+
+**Approve as drafted** (`approve-as-drafted`). Tog, 2026-11-09, from the project pages.
