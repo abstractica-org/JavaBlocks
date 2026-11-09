@@ -11,9 +11,9 @@ public class Reporter implements Output<String>
 	private static final boolean debugOn = true;
 	private static final boolean errorOn = true;
 
-	private static Output<String> defaultInfoReporter;
-	private static Output<String> defaultDebugReporter;
-	private static Output<String> defaultErrorReporter;
+	private static volatile Output<String> defaultInfoReporter;
+	private static volatile Output<String> defaultDebugReporter;
+	private static volatile Output<String> defaultErrorReporter;
 
 	static
 	{
@@ -29,6 +29,33 @@ public class Reporter implements Output<String>
 		{
 			defaultErrorReporter = new Reporter( "ERROR: ", System.err);
 		}
+	}
+
+	/**
+	 * Sets the INFO reporter that blocks built from now on start with; {@code null} means silent.
+	 * Blocks built before keep theirs. (J10)
+	 */
+	public static void setDefaultInfoReporter(Output<String> reporter)
+	{
+		defaultInfoReporter = reporter;
+	}
+
+	/**
+	 * Sets the DEBUG reporter that blocks built from now on start with; {@code null} means silent.
+	 * Blocks built before keep theirs. (J10)
+	 */
+	public static void setDefaultDebugReporter(Output<String> reporter)
+	{
+		defaultDebugReporter = reporter;
+	}
+
+	/**
+	 * Sets the ERROR reporter that blocks built from now on start with; {@code null} means silent.
+	 * Blocks built before keep theirs. (J10)
+	 */
+	public static void setDefaultErrorReporter(Output<String> reporter)
+	{
+		defaultErrorReporter = reporter;
 	}
 
 	public static Output<String> getInfoReporter(Block block)

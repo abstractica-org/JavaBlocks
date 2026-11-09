@@ -213,3 +213,204 @@ now **36** tests. Four one-line mutations of the
 new code each turned tests red and were reverted: interrupt not
 cleared (the new test), `join()` back inside the monitor, `running`
 not reset when the worker ends, the loop ignoring `stopping`.
+
+## J5 — `MapBlock.getSize()` reads under the map lock (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-map-block-lock-its-handler.md`,
+ruled **lock the read**. Known wart "unsynchronized `MapBlock.getSize`":
+every other access to the handler map holds `synchronized (map)`;
+`getSize()` read the `HashMap` without it, so a reader on another thread
+had no guarantee of seeing a current count.
+
+**Change:** `getSize()` takes the same lock. Visible consequence: it now
+waits while the factory creates a handler (creation runs under the lock),
+as `getAllHandlers()` already did.
+
+**Test:** new `MapBlockCharacterizationTest.getSizeWaitsForAHandlerBeingCreated`
+— the factory blocks inside `createHandlerBlockFor`, and `getSize()` on
+another thread stays blocked until it is released. No existing test pinned
+the unlocked read (a stale read cannot be observed reliably), so the pin
+is the wait; it fails with the lock removed.
+
+## J6 — a buffer of capacity below 1 is refused (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-a-buffer-of-size-0-be.md`,
+ruled **refuse capacity below 1**. J3 wart: `getBufferBlock(0)` built a
+buffer that was full from the start, so the first `put` hung until
+interrupted; a negative capacity failed with `NegativeArraySizeException`.
+
+**Change:** `BufferBlockImpl`'s constructor throws
+`IllegalArgumentException("buffer capacity must be at least 1, was N")`
+for any capacity below 1. `BasicBlocks.getBufferBlock` reaches it for
+every capacity other than 1 (which builds the single-slot variant), so
+one check covers the factory, and `BufferedSocketBlockImpl`, which passes
+its caller's size through, now fails at construction too.
+
+**Test flipped in the same commit:**
+`BufferBlockCharacterizationTest.capacityZeroBufferBlocksEveryPut` →
+`capacityBelowOneIsRefusedAtConstruction` (0 and -1 both throw
+`IllegalArgumentException`). The old assertion is gone because the
+behaviour is. Proven able to fail: without the check, the new test is red.
+
+## J7 — the ping-pong handler's timestamps are `volatile` (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-ping-pong-handler-s-timestamps-be-made.md`,
+ruled **mark both fields volatile**. Known wart "non-volatile handler
+timestamps": `PingPongHandlerImpl.lastMessageReceivedTime` is written by
+the thread delivering messages and read by the timer thread;
+`lastPingSentTime` is public through the handler interface. As plain
+`long`s, Java promised neither visibility of the latest write nor an
+untorn read on a 32-bit JVM.
+
+**Change:** both fields are `volatile`. Nothing else.
+
+**Test:** new `PingPongCharacterizationTest.handlerTimestampsAreVolatile`,
+a structural check by reflection — a stale read cannot be provoked
+reliably on a 64-bit JVM, so the record ruled that the declaration is
+what gets pinned. Proven able to fail: removing either keyword turns it red.
+
+## J8 — the distributor forwards from a snapshot, outside its lock (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-distributor-stop-holding-its-lock.md`,
+ruled **forward from a snapshot, outside the lock**. J3 wart: `put` held
+the block's monitor for the whole forwarding loop, so one slow output
+blocked `addOutput`/`removeOutput` and every other producer, and a thread
+draining that slow output deadlocked if it touched the output list.
+
+**Change:** the outputs live in a `CopyOnWriteArrayList`; `put` is no
+longer `synchronized` and loops over the list's snapshot as of the moment
+it starts. `addOutput`, `removeOutput` and `getOutputs` are unchanged.
+This is the rule `MapBlock` already follows: never call out while
+holding your own lock.
+
+**Accepted consequences (the record named them):** two producers putting
+at once are no longer serialized, so different outputs may see their
+messages in different orders; an output added during a forward does not
+get that message; an output removed during a forward still gets that one
+message. A host that needs one order everywhere puts a buffer and one
+thread in front of the distributor. Single-producer order is unchanged
+(still pinned by `forwardsToEveryOutputInRegistrationOrderOnTheCallersThread`).
+
+**Test flipped in the same commit:**
+`DistributorBlockCharacterizationTest.putHoldsTheMonitorWhileForwarding` →
+`addAndRemoveProceedWhileAPutForwardsFromItsSnapshot`: with a put blocked
+in a slow output, `addOutput` and `removeOutput` return at once; the
+added output does not receive the in-flight message, the removed one
+does. Proven able to fail against the v0.2.0 distributor.
+
+## J9 — the delay functions return early on an interrupt and keep the flag (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-what-should-the-delay-functions-do-when.md`,
+ruled **return early and keep the flag**. J3 wart 3: `DelayFunction` and
+`getRandomDelayFunction` caught `InterruptedException`, threw it away
+(clearing the thread's interrupted flag) and slept out the full delay.
+
+**Change, in both `DelayFunctionImpl` and `RandomDelayFunctionImpl`:**
+on an interrupt they re-set the thread's interrupted flag and return the
+item at once. This is Java's convention for code that cannot throw
+`InterruptedException` (they are plain `Function`s). A delay called with
+the flag already set therefore returns at once.
+
+**Effect on the timer idiom:** with the delay on the thread block's
+input side, `stop()` no longer waits out the remaining delay. The thread
+block clears the flag before its put (J4), so the tick in hand is still
+delivered exactly once and
+`constantPlusPullSideDelayPlusThreadTicksOnceMoreAfterStopThenStops`
+stays green unchanged except its javadoc. With the delay on the output
+side (FirstTest), stop() already waits for the in-flight put by design
+(J4) and the interrupt never reaches the delay; nothing changes there.
+
+**Accepted consequence (the record named it):** if some other caller's
+thread is interrupted mid-delay, the item goes downstream early with the
+flag set, and a full buffer there refuses it with `InterruptedException`
+instead of waiting.
+
+**Tests flipped in the same commit:**
+`FunctionBlocksCharacterizationTest.delayFunctionAbsorbsInterruptsAndDelaysTheFullTime`
+→ `delayFunctionReturnsEarlyOnAnInterruptAndKeepsTheFlag`, and
+`randomDelayFunctionAbsorbsInterruptsAndDelaysTheFullTime` (pinned in the
+commit before this one, since the random delay had no test) →
+`randomDelayFunctionReturnsEarlyOnAnInterruptAndKeepsTheFlag`. Each
+proven able to fail: against the old code (late return), and against a
+fix that returns early but drops the flag.
+
+## J10 — a host can set the default reporters; output unchanged (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-how-should-a-host-control-the-blocks.md`,
+ruled **settable defaults, output unchanged**. Known wart "the reporter
+singletons": every block takes its INFO, DEBUG and ERROR reporters from
+`Reporter`'s hard-wired defaults when it is built, and the only way to
+quiet or redirect the library was block by block.
+
+**Change — public API addition, as ruled:** three static setters on
+`Reporter`: `setDefaultInfoReporter`, `setDefaultDebugReporter`,
+`setDefaultErrorReporter`, each taking an `Output<String>`; `null` means
+silent (blocks already skip a null reporter). Blocks built after the call
+pick up the new default; blocks built before keep what they have (not
+retroactive, as the record said). The default fields are `volatile`, so
+a setter called on one thread is seen by blocks built on another.
+Nothing a host sees changes unless it calls a setter: the defaults still
+print exactly as before. The names are the run's choice within the
+ruling (they mirror the existing `defaultInfoReporter` fields and the
+existing `getInfoReporter(Block)` lookups, which are unchanged).
+
+Still open, as the record says, for later rulings: whether debug should
+be off by default, and passing reporters in at build time (belongs with
+the declarative assembly).
+
+**Tests:** `ReporterCharacterizationTest.everyNewBlockStartsWithTheSharedDefaultReporters`
+pinned today's defaults in the commit before this one and stays green;
+new `aSetDefaultReachesBlocksBuiltAfterItAndNotBefore` (a recording
+default, then `null` for silent, restoring the originals after). Proven
+able to fail with a setter that does not store its argument.
+
+*Rejected:* using the setters to quiet the whole test run (J3's rejected
+alternative). Tests that must stay quiet still use the block's own
+setter; the new test restores the defaults it changes.
+
+## J11 — the ping-pong block drops a peer silent for more than three timeouts (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-ping-pong-block-drop-peers-that.md`,
+ruled **drop after three silent timeouts, fixed**. Known wart "handler
+set never shrinks": `MapBlock` already had `removeHandler`, but
+`PingPongBlockImpl` (whose map block is private) never called it, so
+every peer that ever sent a message kept its handler forever and a
+departed peer was pinged forever.
+
+**Change, only in `PingPongBlockImpl`'s timer connector:** on each tick,
+a handler whose last message arrived more than `3 × timeout` ago is
+removed through `mapBlock.removeHandler(key)`, which calls the factory's
+`destroyHandlerBlock` and so the protocol's `destroyHandler`; it is not
+pinged on that tick. Below that, the ping rule is unchanged (pinged when
+quiet longer than the timeout and no ping went out within it). The
+factor 3 is fixed, as ruled; making it a host's choice is public API,
+left for the declarative assembly. A peer that comes back gets a fresh
+handler from its next message (pinned map-block behaviour).
+
+A handler whose arrival time is still unset (`-1`: created by `MapBlock`
+under its lock, its first `put` not yet run) is never treated as silent,
+so a tick racing a new peer's first message cannot drop it. (Without
+this guard, `curTime - (-1)` reads as decades of silence.) Today such a
+handler can draw one spurious ping; that is unchanged.
+
+**Accepted consequences (the record named them):** a peer silent that
+long but still alive loses its handler's state; a message arriving at the
+moment of removal may reach the handler being destroyed. Found in review:
+the drop is checked before the ping, so a host whose ticks come more than
+3 × timeout apart drops a quiet peer without ever pinging it; the
+keep-alive needs ticks no further apart than about 2 × timeout (FirstTest
+ticks every 2 × timeout).
+
+**Test flipped in the same commit:**
+`PingPongCharacterizationTest.aSilentPeerKeepsItsHandlerAndIsPingedForever`
+(pinned in the commit before, since ping-pong had no behaviour tests) →
+`aSilentPeerIsPingedThenDroppedAfterThreeTimeouts`: the silent peer gets
+at least one ping, then its handler is destroyed exactly once and the
+pings stop; a peer that keeps talking is never pinged or dropped; the
+silent peer's next message creates a fresh handler. Proven able to fail
+against the old timer connector. That timing test cannot tell a factor of
+3 from 2 or 4, so `theDropFactorIsThree` pins the constant structurally
+(found in review). The `-1` guard has no test that fails
+without it: the window lies between `MapBlock` releasing its lock and the
+new handler's first `put`, and nothing outside the block can hold a
+thread there (the same limit J4 recorded for two of its guards).

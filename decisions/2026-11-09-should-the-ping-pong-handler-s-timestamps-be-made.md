@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-should-the-ping-pong-handler-s-timestamps-be-made
 title: "Should the ping-pong handler's timestamps be made safe to read across threads?"
-status: ruled
+status: done
 stakes: low
 confidence: 85
 opened: 2026-11-09
@@ -62,3 +62,7 @@ The fields stay plain. Runs move on to the other cleanups; goal 1 cannot be call
 ## Ruling
 
 **Mark both fields volatile** (`mark-both-fields-volatile`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 3: both timestamps in `PingPongHandlerImpl` are now `volatile` (J7), pinned by the new structural test `handlerTimestampsAreVolatile`, proven red with either keyword removed.

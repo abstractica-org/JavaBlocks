@@ -223,3 +223,32 @@ planners, builders and reviewers keep the default.
 - bash: sed -n 19,32p README.md && grep -n "Status" CLAUDE.md
 - bash: python3 - <<'EOF' …
 - bash: sed -n 13,46p STARTUP.md
+- bash: python3 - <<'EOF' …
+- bash: gh pr view 8 --json state,mergeCommit -q '.state+" "+.mergeCommit.oid' && git stash -q && git checkout -q main && git pu …
+- bash: git tag -a autopilot/run-0002 -m "Run 2: goals written; the seven cleanups proposed" && git push -q origin autopilot/run …
+- bash: echo "AUTOPILOT: blocked — rule on the seven cleanup decision records in decisions/2026-11-09-*.md (goal 1); goals are w …
+
+## Assistant — 15:00:21
+
+Run 2 is finished and merged to `main` (PR #8), with the tag `autopilot/run-0002` on `origin/main`. No code changed, and the build is still green at 36 tests.
+
+- **Goals:** `tools/autopilot/GOALS.md` now holds your ruling word for word: the cleanups first, then the declarative assembly, then the viewer adapter. The goals record is marked done.
+- **Goal 1, first step:** I wrote seven decision records, one for each remaining known defect. Each has plain-language options, a recommendation and a confidence. Two defects turned out to be somewhere other than their names suggest:
+  - **"The map block's handler set never shrinks":** the map block can already remove handlers. The real gap is that the ping-pong block never calls that, so peers that have left keep getting pinged forever.
+  - **"Reporter singletons":** the real problem is that a host can't quiet or redirect the library's log output as a whole, only block by block.
+- **Review:** the first fresh review rejected the records for three factual errors, and I fixed them:
+  - a timestamp described as shared between threads when only one of the two is;
+  - a deadlock counted against one distributor option when every option has it;
+  - an overstated claim that a buffer refuses an interrupted put (it only does when it is full).
+- **Second review:** it approved, and I fixed its minor points as well. That pass was not reviewed again; it was wording only, plus a note that untested behaviour gets pinned first.
+- **Housekeeping:** I crystallized run 1's session log (nothing new for the knowledge tree), and rewrote `STARTUP.md` and the run report `tools/autopilot/runs/0002.md`.
+
+Runs can't do any code work until you rule on at least one cleanup record. The report suggests an order, smallest and surest first.
+
+AUTOPILOT: blocked — rule on the seven cleanup decision records in decisions/2026-11-09-*.md (goal 1); goals are written and run 2 is merged and tagged autopilot/run-0002, and no code work is open until a cleanup is ruled
+
+## System — 15:00:21
+
+SessionEnd (other) — ended without hibernate. The scope was popped by the session-end hook; nothing here was handed over. The next wakeup runs the crystallizer over this log.
+
+<!-- crystallized: 2026-11-09 by 6ed5b789-0d17-49e0-954b-b0784f4df23f -->

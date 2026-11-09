@@ -5,6 +5,7 @@ import org.abstractica.javablocks.testsupport.Sink;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -66,20 +67,48 @@ class FunctionBlocksCharacterizationTest
 		assertSame(BasicBlocks.getConsoleBlock(), BasicBlocks.getConsoleBlock());
 	}
 
-	/** Wart: the delay function absorbs interrupts and still sleeps out the full delay. */
+	/** J9: an interrupted delay returns the item at once and keeps the flag (v0.2.0 swallowed it and slept 200 ms). */
 	@Test
-	void delayFunctionAbsorbsInterruptsAndDelaysTheFullTime() throws InterruptedException
+	void delayFunctionReturnsEarlyOnAnInterruptAndKeepsTheFlag() throws InterruptedException
 	{
 		Function<String, String> delay = BasicFunctions.DelayFunction(200);
 		AtomicReference<String> result = new AtomicReference<>();
+		AtomicBoolean flagAfter = new AtomicBoolean();
 		long start = System.nanoTime();
-		Thread t = Async.daemon(() -> result.set(delay.apply("x")));
+		Thread t = Async.daemon(() ->
+		{
+			result.set(delay.apply("x"));
+			flagAfter.set(Thread.currentThread().isInterrupted());
+		});
 		Thread.sleep(20);
 		t.interrupt();
 		assertTrue(Async.finishesWithin(t, 2000));
 		long elapsedMillis = (System.nanoTime() - start) / 1_000_000;
-		assertTrue(elapsedMillis >= 200, "returned after " + elapsedMillis + " ms despite the interrupt");
-		assertEquals("x", result.get());
+		assertTrue(elapsedMillis < 150, "returned after " + elapsedMillis + " ms, not early");
+		assertEquals("x", result.get(), "the item still comes out");
+		assertTrue(flagAfter.get(), "the interrupted flag is kept for the caller");
+	}
+
+	/** J9: the random delay behaves the same (range [200, 201) ms, so the delay would be 200 ms). */
+	@Test
+	void randomDelayFunctionReturnsEarlyOnAnInterruptAndKeepsTheFlag() throws InterruptedException
+	{
+		Function<String, String> delay = BasicFunctions.getRandomDelayFunction(200, 201);
+		AtomicReference<String> result = new AtomicReference<>();
+		AtomicBoolean flagAfter = new AtomicBoolean();
+		long start = System.nanoTime();
+		Thread t = Async.daemon(() ->
+		{
+			result.set(delay.apply("x"));
+			flagAfter.set(Thread.currentThread().isInterrupted());
+		});
+		Thread.sleep(20);
+		t.interrupt();
+		assertTrue(Async.finishesWithin(t, 2000));
+		long elapsedMillis = (System.nanoTime() - start) / 1_000_000;
+		assertTrue(elapsedMillis < 150, "returned after " + elapsedMillis + " ms, not early");
+		assertEquals("x", result.get(), "the item still comes out");
+		assertTrue(flagAfter.get(), "the interrupted flag is kept for the caller");
 	}
 
 	/**
@@ -116,9 +145,11 @@ class FunctionBlocksCharacterizationTest
 
 	/**
 	 * The same idiom with the delay on the pull side. The worker sits inside get() (the delay's
-	 * sleep, which swallows the interrupt), so it finishes that delay, delivers that one tick, sees
-	 * the stop, and exits. Deterministic: exactly one tick after stop() is called, then stop()
-	 * returns. (v0.2.0 delivered the same tick and then deadlocked on the monitor.)
+	 * sleep); stop()'s interrupt makes the delay return early with the flag kept (J9), the thread
+	 * block clears the flag before its put (J4), so it delivers that one tick, sees the stop, and
+	 * exits. Deterministic: exactly one tick after stop() is called, then stop() returns. (Before J9
+	 * the delay swallowed the interrupt and slept out its time first; v0.2.0 delivered the same
+	 * tick and then deadlocked on the monitor.)
 	 */
 	@Test
 	void constantPlusPullSideDelayPlusThreadTicksOnceMoreAfterStopThenStops() throws InterruptedException

@@ -40,6 +40,8 @@ public class PingPongBlockImpl<Key, E, Handler extends Output<E>> extends Abstra
 		return timerConnector;
 	}
 
+	private static final long SILENT_TIMEOUTS_BEFORE_DROP = 3;
+
 	private class TimerConnector implements Output<Long>
 	{
 		@Override
@@ -49,6 +51,13 @@ public class PingPongBlockImpl<Key, E, Handler extends Output<E>> extends Abstra
 			Iterable<PingPongHandler<Key, E, Handler>> handlers = mapBlock.getAllHandlers();
 			for(PingPongHandler<Key, E, Handler> handler : handlers)
 			{
+				// Drop a peer silent for more than three timeouts (J11). -1: first message not yet timestamped.
+				long lastMessageReceivedTime = handler.getLastMessageReceivedTime();
+				if(lastMessageReceivedTime >= 0 && curTime - lastMessageReceivedTime > SILENT_TIMEOUTS_BEFORE_DROP * timeout)
+				{
+					mapBlock.removeHandler(handler.getKey());
+					continue;
+				}
 				long sinceLastPingSentTime = curTime - handler.getLastPingSentTime();
 				if(sinceLastPingSentTime > timeout)
 				{

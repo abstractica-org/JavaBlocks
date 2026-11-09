@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-what-should-the-delay-functions-do-when
 title: What should the delay functions do when their thread is interrupted?
-status: ruled
+status: done
 stakes: medium
 confidence: 78
 opened: 2026-11-09
@@ -73,3 +73,7 @@ The delays keep swallowing interrupts; stopping an input-side timer keeps taking
 ## Ruling
 
 **Return early and keep the flag** (`return-early-and-keep-the-flag`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 3: both delay functions now return early on an interrupt and re-set the flag (J9); their two tests flipped to `…ReturnsEarlyOnAnInterruptAndKeepsTheFlag` (the random one pinned first), each proven red against the old code and against a fix that drops the flag; the pull-side timer test stays green, javadoc updated.

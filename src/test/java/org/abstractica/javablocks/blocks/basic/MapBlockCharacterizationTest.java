@@ -52,6 +52,8 @@ class MapBlockCharacterizationTest
 		final List<Handler> destroyed = new CopyOnWriteArrayList<>();
 		String blockingKey;
 		BlockingSink<String> gate;
+		BlockingSink<String> createGate; // when set, createHandlerBlockFor blocks on it
+
 
 		@Override
 		public String extractKey(String item)
@@ -62,6 +64,16 @@ class MapBlockCharacterizationTest
 		@Override
 		public Handler createHandlerBlockFor(String key)
 		{
+			if (createGate != null)
+			{
+				try
+				{
+					createGate.put(key);
+				} catch (InterruptedException e)
+				{
+					throw new RuntimeException(e);
+				}
+			}
 			Handler h = new Handler(key, key.equals(blockingKey) ? gate : null);
 			created.add(h);
 			creatingThreads.add(Thread.currentThread());
@@ -153,5 +165,26 @@ class MapBlockCharacterizationTest
 		factory.gate.release();
 		assertTrue(Async.finishesWithin(slowProducer, 1000));
 		assertEquals(List.of("slow:1"), factory.created.get(0).received);
+	}
+
+	/** J5: getSize() takes the map lock, so it waits while a handler is being created under it. */
+	@Test
+	void getSizeWaitsForAHandlerBeingCreated() throws InterruptedException
+	{
+		Factory factory = new Factory();
+		factory.createGate = new BlockingSink<>();
+		MapBlock<String, String, Handler> map = BasicBlocks.getMapBlock(factory);
+
+		Thread producer = Async.daemon(() -> map.put("a:1"));
+		assertTrue(factory.createGate.enteredWithin(1000), "the factory is creating a handler under the lock");
+
+		int[] size = {-1};
+		Thread reader = Async.daemon(() -> size[0] = map.getSize());
+		assertTrue(Async.stillRunningAfter(reader, 200), "getSize() waits for the lock");
+
+		factory.createGate.release();
+		assertTrue(Async.finishesWithin(producer, 1000));
+		assertTrue(Async.finishesWithin(reader, 1000));
+		assertEquals(1, size[0]);
 	}
 }

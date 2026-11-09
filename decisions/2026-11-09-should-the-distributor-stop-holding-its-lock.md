@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-should-the-distributor-stop-holding-its-lock
 title: Should the distributor stop holding its lock while it forwards a message?
-status: ruled
+status: done
 stakes: medium
 confidence: 80
 opened: 2026-11-09
@@ -69,3 +69,7 @@ The distributor keeps holding its lock while forwarding. Runs move on to the oth
 ## Ruling
 
 **Forward from a snapshot, outside the lock** (`forward-from-a-snapshot-outside-the-lock`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 3: the distributor now keeps its outputs in a copy-on-write list and forwards outside its lock (J8); `putHoldsTheMonitorWhileForwarding` became `addAndRemoveProceedWhileAPutForwardsFromItsSnapshot`, proven red against the old distributor and against a synchronized put.

@@ -7,6 +7,7 @@ import org.abstractica.javablocks.blocks.basic.Output;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class DistributorBlockImpl<E> extends AbstractBlock implements DistributorBlock<E>
 {
@@ -14,7 +15,7 @@ public class DistributorBlockImpl<E> extends AbstractBlock implements Distributo
 
     public DistributorBlockImpl()
     {
-        this.outputs = new ArrayList<>();
+        this.outputs = new CopyOnWriteArrayList<>();
     }
 
     @Override
@@ -36,8 +37,9 @@ public class DistributorBlockImpl<E> extends AbstractBlock implements Distributo
         return new ArrayList<>(outputs);
     }
 
+    // Not synchronized: forwards from the list's snapshot, so a slow output never holds the lock (J8).
     @Override
-    public synchronized void put(E item) throws InterruptedException
+    public void put(E item) throws InterruptedException
     {
         for(Output<E> output : outputs)
         {
