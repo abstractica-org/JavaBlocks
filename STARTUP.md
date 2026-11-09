@@ -1,7 +1,7 @@
 # STARTUP — JavaBlocks
 
-Rewritten 2026-11-09 by autopilot run 1 (report:
-`tools/autopilot/runs/0001.md`). The owner works on more than one
+Rewritten 2026-11-09 by autopilot run 2 (report:
+`tools/autopilot/runs/0002.md`). The owner works on more than one
 machine, so `origin/main` may trail the checkout you are in: run
 `git log origin/main..main` before trusting what follows.
 
@@ -20,27 +20,35 @@ the stop() fix. Driven runs work within `tools/autopilot/DELEGATION.md`.
   are Tog's call.
 - `knowledge/thread-model/` holds the current thread model and stop()
   contract.
-- **No `tools/autopilot/GOALS.md` yet.** The proposal is open:
-  `decisions/2026-11-09-set-the-goals-for-javablocks.md` (recommends
-  assembly first, cleanups alongside). Do not propose it again.
-- No ruled record is waiting to be carried out.
+- **Goals are set** (`tools/autopilot/GOALS.md`, Tog's ruling
+  2026-11-09): 1. the seven remaining cleanups, one ruling each; 2. the
+  declarative assembly; 3. the viewer adapter. Nothing toward goal 2
+  starts before goal 1 is done (every wart fixed or ruled left).
+- **Seven cleanup records are open** (`decisions/2026-11-09-*.md`,
+  `status: proposed`), one per wart: map `getSize` lock, buffer size 0,
+  ping-pong timestamps `volatile`, distributor lock, delay interrupts,
+  reporter defaults, ping-pong silent peers. Do not propose them again.
 
 ## Scope for the next session
 
-1. **If the goals record is ruled:** write `tools/autopilot/GOALS.md`
-   from the ruling word for word (`# Goals — javablocks`, then the goals),
-   mark the record done, then take the first step toward goal 1.
-2. **If it is not ruled:** housekeeping only. Do not start work toward
-   any goal; end blocked on the goals ruling.
-3. A likely first step under the recommended goals is a decision record
-   proposing the declarative assembly's outside shape. The outside is
-   Tog's to design. Proposal material: nodes with kinds, typed ports
-   with push/pull mode, wires, and the map block's keyed factory as a
-   filler. Acceptance: FirstTest's ping-pong pipeline and the
-   `examples/udp` pipelines rebuilt through it.
+1. **For each cleanup record Tog has ruled** (wakeup lists them under
+   "Ruled …, not yet carried out"): carry it out exactly as ruled, one
+   wart per commit: a `J` entry in `design/decision-log.md` first, the
+   pinning test changed visibly in the same commit, mutation-proved.
+   Where the record says the behaviour has no test yet (random delay,
+   ping-pong), pin today's behaviour first, then change it. Mark the
+   record done.
+2. **If none is ruled:** housekeeping only; end blocked on the records.
+3. Delay fix note: the javadoc of
+   `constantPlusPullSideDelayPlusThreadTicksOnceMoreAfterStopThenStops`
+   says the delay "swallows the interrupt"; update it with that fix.
 
 ## Facts not worth rediscovering
 
+- Two wart names mislead. "Handler set never shrinks": `MapBlock`
+  already has `removeHandler`; the gap is that `PingPongBlockImpl`
+  (whose map block is private) never calls it. "Reporter singletons":
+  the gap is that a host cannot set the defaults; see the record.
 - `Input`/`Output` are named from the wire's side: implementing
   `Output<E>` makes a block a *sink*. The viewer flips the words; the
   adapter does the flipping, and the library keeps its names.
