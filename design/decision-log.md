@@ -367,3 +367,44 @@ able to fail with a setter that does not store its argument.
 *Rejected:* using the setters to quiet the whole test run (J3's rejected
 alternative). Tests that must stay quiet still use the block's own
 setter; the new test restores the defaults it changes.
+
+## J11 — the ping-pong block drops a peer silent for more than three timeouts (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-ping-pong-block-drop-peers-that.md`,
+ruled **drop after three silent timeouts, fixed**. Known wart "handler
+set never shrinks": `MapBlock` already had `removeHandler`, but
+`PingPongBlockImpl` (whose map block is private) never called it, so
+every peer that ever sent a message kept its handler forever and a
+departed peer was pinged forever.
+
+**Change, only in `PingPongBlockImpl`'s timer connector:** on each tick,
+a handler whose last message arrived more than `3 × timeout` ago is
+removed through `mapBlock.removeHandler(key)`, which calls the factory's
+`destroyHandlerBlock` and so the protocol's `destroyHandler`; it is not
+pinged on that tick. Below that, the ping rule is unchanged (pinged when
+quiet longer than the timeout and no ping went out within it). The
+factor 3 is fixed, as ruled; making it a host's choice is public API,
+left for the declarative assembly. A peer that comes back gets a fresh
+handler from its next message (pinned map-block behaviour).
+
+A handler whose arrival time is still unset (`-1`: created by `MapBlock`
+under its lock, its first `put` not yet run) is never treated as silent,
+so a tick racing a new peer's first message cannot drop it. (Without
+this guard, `curTime - (-1)` reads as decades of silence.) Today such a
+handler can draw one spurious ping; that is unchanged.
+
+**Accepted consequences (the record named them):** a peer silent that
+long but still alive loses its handler's state; a message arriving at the
+moment of removal may reach the handler being destroyed.
+
+**Test flipped in the same commit:**
+`PingPongCharacterizationTest.aSilentPeerKeepsItsHandlerAndIsPingedForever`
+(pinned in the commit before, since ping-pong had no behaviour tests) →
+`aSilentPeerIsPingedThenDroppedAfterThreeTimeouts`: the silent peer gets
+at least one ping, then its handler is destroyed exactly once and the
+pings stop; a peer that keeps talking is never pinged or dropped; the
+silent peer's next message creates a fresh handler. Proven able to fail
+against the old timer connector. The `-1` guard has no test that fails
+without it: the window lies between `MapBlock` releasing its lock and the
+new handler's first `put`, and nothing outside the block can hold a
+thread there (the same limit J4 recorded for two of its guards).
