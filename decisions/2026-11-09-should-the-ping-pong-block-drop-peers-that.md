@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-should-the-ping-pong-block-drop-peers-that
 title: Should the ping-pong block drop peers that have gone silent?
-status: proposed
+status: ruled
 stakes: medium
 confidence: 72
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: eba163f7-4766-4239-b515-dcd76034fa77
 recommends: drop-after-three-silent-timeouts-fixed
@@ -68,3 +69,7 @@ Drop after three silent timeouts, with the number fixed. It fixes the real harm 
 ## If nothing is decided
 
 Ping-pong keeps every peer forever and keeps pinging the departed. Runs move on to the other cleanups; goal 1 cannot be called done until this is ruled.
+
+## Ruling
+
+**Drop after three silent timeouts, fixed** (`drop-after-three-silent-timeouts-fixed`). Tog, 2026-11-09, from the project pages.
