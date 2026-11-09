@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-should-the-distributor-stop-holding-its-lock
 title: Should the distributor stop holding its lock while it forwards a message?
-status: proposed
+status: ruled
 stakes: medium
 confidence: 80
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: eba163f7-4766-4239-b515-dcd76034fa77
 recommends: forward-from-a-snapshot-outside-the-lock
@@ -64,3 +65,7 @@ Forward from a snapshot, outside the lock. It removes a real deadlock and makes 
 ## If nothing is decided
 
 The distributor keeps holding its lock while forwarding. Runs move on to the other cleanups; goal 1 cannot be called done until this is ruled.
+
+## Ruling
+
+**Forward from a snapshot, outside the lock** (`forward-from-a-snapshot-outside-the-lock`). Tog, 2026-11-09, from the project pages.
