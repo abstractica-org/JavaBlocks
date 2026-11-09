@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-should-a-buffer-of-size-0-be
 title: Should a buffer of size 0 be refused instead of blocking forever?
-status: proposed
+status: ruled
 stakes: low
 confidence: 88
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: eba163f7-4766-4239-b515-dcd76034fa77
 recommends: refuse-capacity-below-1
@@ -58,3 +59,7 @@ Refuse capacity below 1. It turns a silent hang into a clear error at the line t
 ## If nothing is decided
 
 Size-0 buffers keep hanging on the first put. Runs move on to the other cleanups; goal 1 cannot be called done until this is ruled.
+
+## Ruling
+
+**Refuse capacity below 1** (`refuse-capacity-below-1`). Tog, 2026-11-09, from the project pages.
