@@ -34,35 +34,55 @@ assumes the other never existed.
 
 ### Read the two local commits, then rebase onto main
 
-**Buys:** both sides survive, and the history stays linear and readable.
-The two local commits are small and self-contained (a test suite), which
-is the best case for rebasing.
-**Costs:** somebody has to read both sides first and be sure the eight
-server commits do not already contain a different version of the same
-work; if they do, the rebase produces a mess that has to be untangled by
-hand.
+**Pros:**
+
+- both sides survive, and the history stays linear and readable. The two
+  local commits are small and self-contained (a test suite), which is
+  the best case for rebasing.
+
+**Cons:**
+
+- somebody has to read both sides first and be sure the eight server
+  commits do not already contain a different version of the same work;
+  if they do, the rebase produces a mess that has to be untangled by
+  hand.
 
 ### Merge the two together
 
-**Buys:** nothing is rewritten, so nothing can be lost by a bad rebase;
-it is the safe mechanical option.
-**Costs:** a merge commit in a repository whose history is otherwise
-linear, and the same reading of both sides is needed anyway to resolve
-conflicts sensibly.
+**Pros:**
+
+- nothing is rewritten, so nothing can be lost by a bad rebase; it is
+  the safe mechanical option.
+
+**Cons:**
+
+- a merge commit in a repository whose history is otherwise linear, and
+  the same reading of both sides is needed anyway to resolve conflicts
+  sensibly.
 
 ### Discard the local side
 
-**Buys:** one command; the checkout matches the server immediately.
-**Costs:** throws away a characterisation test suite that somebody built
-deliberately. Unacceptable without reading it first, which is the
-expensive part of every other option anyway.
+**Pros:**
+
+- one command; the checkout matches the server immediately.
+
+**Cons:**
+
+- throws away a characterisation test suite that somebody built
+  deliberately. Unacceptable without reading it first, which is the
+  expensive part of every other option anyway.
 
 ### Leave it diverged
 
-**Buys:** nothing is decided wrongly today.
-**Costs:** the divergence grows. Every session that opens this repository
-has to rediscover the situation, and the first one that pushes without
-noticing loses one side or the other.
+**Pros:**
+
+- nothing is decided wrongly today.
+
+**Cons:**
+
+- the divergence grows. Every session that opens this repository has to
+  rediscover the situation, and the first one that pushes without
+  noticing loses one side or the other.
 
 ## Recommendation
 

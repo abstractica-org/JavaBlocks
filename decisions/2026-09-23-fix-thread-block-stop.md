@@ -38,13 +38,18 @@ an unstoppable timer as its canonical example.
 
 ### Do nothing
 
-**Buys:** The v0.2.1 pin stays exactly the code proven in other
-projects; zero risk to concurrency semantics; the assembly work can
-proceed on the pinned base regardless.
-**Costs:** Every pipeline with a non-buffer-fed ThreadBlock stays
-unstoppable; hosts must kill the JVM or poison downstream to end a
-timer; `isRunning()` can block forever, which any lifecycle-managing
-assembly runtime will trip over.
+**Pros:**
+
+- The v0.2.1 pin stays exactly the code proven in other projects; zero
+  risk to concurrency semantics; the assembly work can proceed on the
+  pinned base regardless.
+
+**Cons:**
+
+- Every pipeline with a non-buffer-fed ThreadBlock stays unstoppable;
+  hosts must kill the JVM or poison downstream to end a timer;
+  `isRunning()` can block forever, which any lifecycle-managing assembly
+  runtime will trip over.
 
 ### Fix stop() minimally
 
@@ -57,15 +62,19 @@ in-flight `put` completes for every input kind, and the three J3 tests
 that pin the deadlock/hang flip to pin termination — changed in the
 same commit, per the pin-before-change rule.
 
-**Buys:** Every ThreadBlock becomes stoppable, including the timer
-idiom and socket-fed threads; `isRunning()` never blocks and never
-lies; smallest possible diff to handwritten code; the steady-state
-data path (get → put hand-off, back-pressure) is untouched.
-**Costs:** A behaviour change to the library's most delicate class;
-a worker inside an interrupt-swallowing `get()` (DelayFunction,
-socket) still finishes that get and one put before exiting — stop is
-prompt, not instant, unless DelayFunction is also fixed (a separate
-ruled step).
+**Pros:**
+
+- Every ThreadBlock becomes stoppable, including the timer idiom and
+  socket-fed threads; `isRunning()` never blocks and never lies;
+  smallest possible diff to handwritten code; the steady-state data path
+  (get → put hand-off, back-pressure) is untouched.
+
+**Cons:**
+
+- A behaviour change to the library's most delicate class; a worker
+  inside an interrupt-swallowing `get()` (DelayFunction, socket) still
+  finishes that get and one put before exiting — stop is prompt, not
+  instant, unless DelayFunction is also fixed (a separate ruled step).
 
 ### Redesign the lifecycle
 
@@ -73,11 +82,16 @@ A larger step: e.g. a poison-pill/closeable protocol on `Input`, or
 interrupt-honouring delay/socket blocks plus stop semantics defined
 across all of `ThreadControl`.
 
-**Buys:** A coherent shutdown story for every block at once, ready
-for the assembly's lifecycle needs.
-**Costs:** Violates the one-wart-per-step rule; redesigns the outside,
-which is the owner's, before the assembly's needs are even known;
-large test churn on a base whose value is stability.
+**Pros:**
+
+- A coherent shutdown story for every block at once, ready for the
+  assembly's lifecycle needs.
+
+**Cons:**
+
+- Violates the one-wart-per-step rule; redesigns the outside, which is
+  the owner's, before the assembly's needs are even known; large test
+  churn on a base whose value is stability.
 
 ## Recommendation
 
