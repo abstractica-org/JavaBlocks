@@ -231,3 +231,23 @@ as `getAllHandlers()` already did.
 another thread stays blocked until it is released. No existing test pinned
 the unlocked read (a stale read cannot be observed reliably), so the pin
 is the wait; it fails with the lock removed.
+
+## J6 — a buffer of capacity below 1 is refused (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-a-buffer-of-size-0-be.md`,
+ruled **refuse capacity below 1**. J3 wart: `getBufferBlock(0)` built a
+buffer that was full from the start, so the first `put` hung until
+interrupted; a negative capacity failed with `NegativeArraySizeException`.
+
+**Change:** `BufferBlockImpl`'s constructor throws
+`IllegalArgumentException("buffer capacity must be at least 1, was N")`
+for any capacity below 1. `BasicBlocks.getBufferBlock` reaches it for
+every capacity other than 1 (which builds the single-slot variant), so
+one check covers the factory, and `BufferedSocketBlockImpl`, which passes
+its caller's size through, now fails at construction too.
+
+**Test flipped in the same commit:**
+`BufferBlockCharacterizationTest.capacityZeroBufferBlocksEveryPut` →
+`capacityBelowOneIsRefusedAtConstruction` (0 and -1 both throw
+`IllegalArgumentException`). The old assertion is gone because the
+behaviour is. Proven able to fail: without the check, the new test is red.
