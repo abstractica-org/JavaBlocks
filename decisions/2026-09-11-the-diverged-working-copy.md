@@ -1,7 +1,7 @@
 ---
 id: 2026-09-11-the-diverged-working-copy
 title: This repository's working copy and its trunk have each moved without the other
-status: ruled
+status: done
 stakes: medium
 confidence: 82
 opened: 2026-09-11
@@ -118,3 +118,7 @@ at, or does not notice and loses one side.
 ## Ruling
 
 **Read the two local commits, then rebase onto main** (`read-the-two-local-commits-then-rebase-onto-main`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09 — already carried out as ruled by the 2026-09-23 session: the two local commits (J2 pom, J3 characterization tests) were read, rebased onto the server's `main` and pushed — they are on `origin/main` as `2bf6bb6`, tagged `v0.2.1` — and the session logs were committed; the migration run verified this and closed the record.

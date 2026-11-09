@@ -7,15 +7,14 @@ pushed). The owner works on more than one machine, so `origin/main` may
 trail the checkout you are in: run `git log origin/main..main` before
 trusting State and Scope below.
 
-**Migrated to the foundation 2026-11-09** (branch
-`migrate-20261109-0940`, one PR for the owner): new standard
-`README.md` (the old two-line one moved to `docs/original-readme.md`),
-both decision records reshaped to Pros/Cons lists (content unchanged),
-`knowledge/_index.md`'s stale path list corrected. The project is
-**parked** for driven runs until the owner answers
-`decisions/2026-11-09-approve-the-autopilot-delegation-for-javablocks.md`
-— approving it writes `tools/autopilot/DELEGATION.md`. Two session logs
-await the crystallizer (`kt check` warning).
+**Migrated to the foundation 2026-11-09** (PR #5, branch
+`migrate-20261109-0940`): standard `README.md` (the old one is
+`docs/original-readme.md`), decision records in Pros/Cons shape. A second
+migration run the same day (`migrate-20261109-0959`) found nothing left
+to reshape and closed two ruled records. The autopilot delegation is
+**approved** — `tools/autopilot/DELEGATION.md` — so driven runs may work
+here within it. Three session logs await the crystallizer (`kt check`
+warning).
 
 You are in **JavaBlocks**, the owner's block-programming library for
 multithreaded pipelines. Read `design/decision-log.md` **J1** (charter),
@@ -23,7 +22,7 @@ multithreaded pipelines. Read `design/decision-log.md` **J1** (charter),
 
 ## State
 
-- `main` = `72dd3ca`, tagged **`v0.2.1`**: the `v0.2.0` code
+- `v0.2.1` = `2bf6bb6` on `main`, tagged **`v0.2.1`**: the `v0.2.0` code
   (`3076b2a`) byte-for-byte, now pinned by **34 green characterization
   tests** (~9 s, three consecutive runs verified). Pom is real
   (`org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25, JUnit 5).
@@ -35,16 +34,10 @@ multithreaded pipelines. Read `design/decision-log.md` **J1** (charter),
   Every test was proven able to fail via 13 one-line mutations (J3).
 - The settled thread model and the v0.2.0 `stop()` contract are
   crystallized at `knowledge/thread-model/`.
-- **Waiting on the owner:** the autopilot delegation record above; and
-  `decisions/2026-09-11-the-diverged-working-copy.md` was carried out
-  by the 2026-09-23 hibernate exactly as its recommendation says
-  (local commits read, rebased onto main, session logs committed) but
-  is still `status: proposed` — it needs the owner's ruling/close.
-  And `decisions/2026-09-23-fix-thread-block-stop.md`
-  — whether to fix `stop()` (it deadlocks or never returns unless the
-  worker is parked in an interruptible `get()`; the timer idiom is
-  unstoppable). Recommendation: fix minimally, as the first ruled
-  cleanup step.
+- **Ruled, not yet carried out:**
+  `decisions/2026-09-23-fix-thread-block-stop.md` — ruled **fix stop()
+  minimally** (2026-11-09). Needs code: Scope item 1 below. The
+  diverged-working-copy and delegation records are `done`.
 
 ## Scope — in this order, ONE thing at a time
 
