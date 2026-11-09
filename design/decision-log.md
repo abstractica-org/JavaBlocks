@@ -268,3 +268,32 @@ untorn read on a 32-bit JVM.
 a structural check by reflection — a stale read cannot be provoked
 reliably on a 64-bit JVM, so the record ruled that the declaration is
 what gets pinned. Proven able to fail: removing either keyword turns it red.
+
+## J8 — the distributor forwards from a snapshot, outside its lock (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-distributor-stop-holding-its-lock.md`,
+ruled **forward from a snapshot, outside the lock**. J3 wart: `put` held
+the block's monitor for the whole forwarding loop, so one slow output
+blocked `addOutput`/`removeOutput` and every other producer, and a thread
+draining that slow output deadlocked if it touched the output list.
+
+**Change:** the outputs live in a `CopyOnWriteArrayList`; `put` is no
+longer `synchronized` and loops over the list's snapshot as of the moment
+it starts. `addOutput`, `removeOutput` and `getOutputs` are unchanged.
+This is the rule `MapBlock` already follows: never call out while
+holding your own lock.
+
+**Accepted consequences (the record named them):** two producers putting
+at once are no longer serialized, so different outputs may see their
+messages in different orders; an output added during a forward does not
+get that message; an output removed during a forward still gets that one
+message. A host that needs one order everywhere puts a buffer and one
+thread in front of the distributor. Single-producer order is unchanged
+(still pinned by `forwardsToEveryOutputInRegistrationOrderOnTheCallersThread`).
+
+**Test flipped in the same commit:**
+`DistributorBlockCharacterizationTest.putHoldsTheMonitorWhileForwarding` →
+`addAndRemoveProceedWhileAPutForwardsFromItsSnapshot`: with a put blocked
+in a slow output, `addOutput` and `removeOutput` return at once; the
+added output does not receive the in-flight message, the removed one
+does. Proven able to fail against the v0.2.0 distributor.
