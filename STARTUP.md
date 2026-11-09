@@ -1,76 +1,69 @@
 # STARTUP — JavaBlocks
 
-Rewritten 2026-11-09 by autopilot run 2 (report:
-`tools/autopilot/runs/0002.md`). The owner works on more than one
+Rewritten 2026-11-09 by autopilot run 3 (report:
+`tools/autopilot/runs/0003.md`). The owner works on more than one
 machine, so `origin/main` may trail the checkout you are in: run
 `git log origin/main..main` before trusting what follows.
 
 You are in **JavaBlocks**, the owner's block-programming library for
 multithreaded pipelines. Read `design/decision-log.md` first: **J1** is
 the charter, **J2** the pom, **J3** the characterization tests, **J4**
-the stop() fix. Driven runs work within `tools/autopilot/DELEGATION.md`.
+the stop() fix, **J5–J11** the seven cleanups. Driven runs work within
+`tools/autopilot/DELEGATION.md`.
 
 ## State
 
-- `v0.2.1` (tag, `2bf6bb6`) is the `v0.2.0` code pinned by 34 tests.
-  Since then `main` carries one ruled cleanup, **J4**: `ThreadBlock.stop()`
-  returns for every input kind; it joins outside the monitor, stops only
-  the run it was called on, and a dead worker reports not running.
-  **36 tests**, green, about 5 s. No release since `v0.2.1`; releases
-  are Tog's call.
-- `knowledge/thread-model/` holds the current thread model and stop()
-  contract.
-- **Goals are set** (`tools/autopilot/GOALS.md`, Tog's ruling
-  2026-11-09): 1. the seven remaining cleanups, one ruling each; 2. the
-  declarative assembly; 3. the viewer adapter. Nothing toward goal 2
-  starts before goal 1 is done (every wart fixed or ruled left).
-- **Seven cleanup records are open** (`decisions/2026-11-09-*.md`,
-  `status: proposed`), one per wart: map `getSize` lock, buffer size 0,
-  ping-pong timestamps `volatile`, distributor lock, delay interrupts,
-  reporter defaults, ping-pong silent peers. Do not propose them again.
+- `v0.2.1` (tag) is the `v0.2.0` code pinned by 34 tests. Since then
+  `main` carries the eight ruled cleanups (J4–J11): stop() always
+  returns; map `getSize` locked; buffer capacity below 1 refused;
+  ping-pong timestamps `volatile`; distributor forwards from a snapshot
+  outside its lock; delays return early on interrupt and keep the flag;
+  `Reporter.setDefault{Info,Debug,Error}Reporter` (null = silent);
+  ping-pong drops a peer silent > 3 × timeout. **43 tests**, green,
+  about 6 s. No release since `v0.2.1`; releases are Tog's call.
+- **Goal 1 is done** (`tools/autopilot/GOALS.md`): every known wart is
+  fixed. Every cleanup record is `status: done`.
+- **Goal 2 waits on one record:**
+  `decisions/2026-11-09-what-form-should-the-declarative-pipeline-assembly.md`
+  (`status: proposed`) — the assembly's overall form; recommended
+  "Design as data, with a typed Java builder on top". Do not propose it
+  again.
 
 ## Scope for the next session
 
-1. **For each cleanup record Tog has ruled** (wakeup lists them under
-   "Ruled …, not yet carried out"): carry it out exactly as ruled, one
-   wart per commit: a `J` entry in `design/decision-log.md` first, the
-   pinning test changed visibly in the same commit, mutation-proved.
-   Where the record says the behaviour has no test yet (random delay,
-   ping-pong), pin today's behaviour first, then change it. Mark the
-   record done.
-2. **If none is ruled:** housekeeping only; end blocked on the records.
-3. Delay fix note: the javadoc of
-   `constantPlusPullSideDelayPlusThreadTicksOnceMoreAfterStopThenStops`
-   says the delay "swallows the interrupt"; update it with that fix.
+1. **If the form record is ruled** (wakeup lists it under "Ruled …"):
+   carry out what it decides — that is, propose the follow-up records it
+   names (exact class/method names; how the viewer names Java functions;
+   the map block's per-key sub-design), and build only what the rulings
+   cover, starting with a J entry. Every public name is Tog's (delegation).
+2. **If not ruled:** housekeeping only; end blocked on that record.
 
 ## Facts not worth rediscovering
 
-- Two wart names mislead. "Handler set never shrinks": `MapBlock`
-  already has `removeHandler`; the gap is that `PingPongBlockImpl`
-  (whose map block is private) never calls it. "Reporter singletons":
-  the gap is that a host cannot set the defaults; see the record.
 - `Input`/`Output` are named from the wire's side: implementing
   `Output<E>` makes a block a *sink*. The viewer flips the words; the
   adapter does the flipping, and the library keeps its names.
-- Only `ThreadBlock` owns a thread. See `knowledge/thread-model/`.
-- Stop is prompt, not instant, for timers: `DelayFunction` still
-  swallows interrupts (J3 wart 3, unfixed), so the worker finishes the
-  delay and delivers one tick first.
+- Only `ThreadBlock` owns a thread. See `knowledge/thread-model/`,
+  which now also holds where map, distributor and ping-pong lock.
+- An `assemblies/` package already exists (`Assemblies.getBufferedSocketBlock`,
+  a ready-made composite); the new builder must not collide with it.
+- The ping-pong keep-alive needs ticks at most about 2 × timeout apart:
+  the drop check runs before the ping (J11).
 - The default reporters print `INFO:`/`DEBUG:` on every put. Tests that
-  must stay quiet use `setDebugReporter(getTrashcanBlock())`; do not
-  silence the reporters globally (J3, rejected alternative).
+  must stay quiet use `setDebugReporter(getTrashcanBlock())`; the
+  reporter test that changes the global defaults restores them in
+  `finally` — don't turn on parallel test execution without fixing that.
 - The stack traces in `mvn verify` output (InterruptedException,
   "downstream rejects 1") are expected: tests provoke them.
 - Mutation drill for new pins: break one line, run the one test class,
   expect red, then `git checkout -- src/main`. A race is pinned by
-  repeating it (see `aStartDuringAPendingStopDoesNotHangTheStop`).
-- Two J4 guards have no test that would fail without them: the
-  `workerThread == worker` check before stop()'s interrupt, and the
-  rethrow during a pending stop. The second can't be observed without a
-  global uncaught-exception handler.
+  repeating it.
+- Untestable guards, recorded as such: J4's `workerThread == worker`
+  check and rethrow during a pending stop; J11's "-1 = not yet
+  timestamped" guard.
 - The viewer-side reading of this code is
-  `wiring-playground/design/javablocks-map-block.md` plus its assessment.
-  Runs never touch that repo.
+  `wiring-playground/design/javablocks-map-block.md` (not on every
+  machine). Runs never touch that repo.
 
 ## Protocol
 
