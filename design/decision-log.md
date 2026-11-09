@@ -213,3 +213,21 @@ now **36** tests. Four one-line mutations of the
 new code each turned tests red and were reverted: interrupt not
 cleared (the new test), `join()` back inside the monitor, `running`
 not reset when the worker ends, the loop ignoring `stopping`.
+
+## J5 — `MapBlock.getSize()` reads under the map lock (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-should-the-map-block-lock-its-handler.md`,
+ruled **lock the read**. Known wart "unsynchronized `MapBlock.getSize`":
+every other access to the handler map holds `synchronized (map)`;
+`getSize()` read the `HashMap` without it, so a reader on another thread
+had no guarantee of seeing a current count.
+
+**Change:** `getSize()` takes the same lock. Visible consequence: it now
+waits while the factory creates a handler (creation runs under the lock),
+as `getAllHandlers()` already did.
+
+**Test:** new `MapBlockCharacterizationTest.getSizeWaitsForAHandlerBeingCreated`
+— the factory blocks inside `createHandlerBlockFor`, and `getSize()` on
+another thread stays blocked until it is released. No existing test pinned
+the unlocked read (a stale read cannot be observed reliably), so the pin
+is the wait; it fails with the lock removed.
