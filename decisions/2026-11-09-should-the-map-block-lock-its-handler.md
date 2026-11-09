@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-should-the-map-block-lock-its-handler
 title: Should the map block lock its handler count?
-status: ruled
+status: done
 stakes: low
 confidence: 90
 opened: 2026-11-09
@@ -54,3 +54,7 @@ getSize() stays unlocked. Runs move on to the other cleanups; goal 1 cannot be c
 ## Ruling
 
 **Lock the read** (`lock-the-read`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 3: `getSize()` now reads under the map lock (J5), pinned by the new test `getSizeWaitsForAHandlerBeingCreated`, proven red without the lock.

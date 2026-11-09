@@ -25,7 +25,10 @@ public class MapBlockImpl<Key, E, Handler extends MapHandlerBlock<Key, E>>
 	@Override
 	public int getSize()
 	{
-		return map.size();
+		synchronized (map)
+		{
+			return map.size();
+		}
 	}
 
 	@Override
