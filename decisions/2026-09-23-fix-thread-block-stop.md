@@ -1,10 +1,11 @@
 ---
 id: 2026-09-23-fix-thread-block-stop
 title: Fix ThreadBlock.stop() — it deadlocks or never returns unless the worker is parked in an interruptible get()
-status: proposed
+status: ruled
 stakes: medium
 confidence: 80
 opened: 2026-09-23
+ruled: 2026-11-09
 repo: javablocks
 by: edae1351
 recommends: fix-stop-minimally
@@ -110,3 +111,7 @@ assembly (the next scope) can be designed and built against it. The
 deadlock remains pinned as documented behaviour, and any assembly or
 viewer feature that wants to stop a running pipeline will surface
 this record again.
+
+## Ruling
+
+**Fix stop() minimally** (`fix-stop-minimally`). Tog, 2026-11-09, from the project pages.
