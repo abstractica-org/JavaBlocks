@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-should-the-ping-pong-block-drop-peers-that
 title: Should the ping-pong block drop peers that have gone silent?
-status: ruled
+status: done
 stakes: medium
 confidence: 72
 opened: 2026-11-09
@@ -73,3 +73,7 @@ Ping-pong keeps every peer forever and keeps pinging the departed. Runs move on 
 ## Ruling
 
 **Drop after three silent timeouts, fixed** (`drop-after-three-silent-timeouts-fixed`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 3: the ping-pong timer now removes a peer silent for more than three timeouts through the map block's `removeHandler` (J11); today's behaviour was pinned first and flipped to `aSilentPeerIsPingedThenDroppedAfterThreeTimeouts`, proven red against the old code and with the factor changed to 1 or 30.

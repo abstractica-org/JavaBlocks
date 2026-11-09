@@ -57,12 +57,13 @@ class PingPongCharacterizationTest
 	}
 
 	/**
-	 * Wart: a peer that has gone silent keeps its handler forever and is pinged on every tick that
-	 * finds it quiet for longer than the timeout; nothing ever destroys its handler. A peer that
-	 * keeps talking is never pinged.
+	 * J11: a silent peer is pinged while quiet for longer than the timeout, then dropped once quiet for
+	 * more than three timeouts: its handler is destroyed through the protocol and the pings stop. A
+	 * peer that keeps talking is never pinged or dropped; the dropped peer's next message creates a
+	 * fresh handler. (v0.2.0 pinged a silent peer on every tick forever and never destroyed a handler.)
 	 */
 	@Test
-	void aSilentPeerKeepsItsHandlerAndIsPingedForever() throws InterruptedException
+	void aSilentPeerIsPingedThenDroppedAfterThreeTimeouts() throws InterruptedException
 	{
 		Protocol protocol = new Protocol();
 		Sink<String> sent = new Sink<>();
@@ -70,7 +71,7 @@ class PingPongCharacterizationTest
 		Output<Long> timer = block.getTimerConnector();
 
 		block.put("silent:hello");
-		for (int tick = 0; tick < 8; tick++)
+		for (int tick = 0; tick < 8; tick++) // 8 ticks of 70+ ms: well past 3 x 50 ms of silence
 		{
 			block.put("talker:still here");
 			Thread.sleep(TIMEOUT + 20);
@@ -78,10 +79,15 @@ class PingPongCharacterizationTest
 			timer.put(TIMEOUT);
 		}
 
-		assertEquals(8, pingsTo(sent, "silent"), "pinged on every tick, long after 3 timeouts of silence");
+		long pings = pingsTo(sent, "silent");
+		assertTrue(pings >= 1 && pings <= 2, "pinged while quiet for 1 to 3 timeouts, then not; got " + pings);
+		assertEquals(1, protocol.destroyed.size(), "the silent peer's handler is destroyed exactly once");
 		assertEquals(0, pingsTo(sent, "talker"));
-		assertEquals(List.of(), protocol.destroyed, "no handler is ever destroyed");
-		assertEquals(List.of("silent", "talker"), protocol.created);
+		assertEquals(List.of("silent", "talker"), protocol.created, "the talker is never dropped");
+
+		block.put("silent:back again");
+		assertEquals(List.of("silent", "talker", "silent"), protocol.created, "a returning peer gets a fresh handler");
+		assertEquals(List.of("silent:hello"), protocol.destroyed.getFirst().items(), "the destroyed handler was the silent peer's");
 	}
 
 	/**
