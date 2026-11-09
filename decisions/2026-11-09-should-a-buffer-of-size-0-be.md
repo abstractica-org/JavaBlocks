@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-should-a-buffer-of-size-0-be
 title: Should a buffer of size 0 be refused instead of blocking forever?
-status: ruled
+status: done
 stakes: low
 confidence: 88
 opened: 2026-11-09
@@ -63,3 +63,7 @@ Size-0 buffers keep hanging on the first put. Runs move on to the other cleanups
 ## Ruling
 
 **Refuse capacity below 1** (`refuse-capacity-below-1`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 3: a buffer capacity below 1 now throws `IllegalArgumentException` at construction (J6); `capacityZeroBufferBlocksEveryPut` became `capacityBelowOneIsRefusedAtConstruction`, proven red without the check.

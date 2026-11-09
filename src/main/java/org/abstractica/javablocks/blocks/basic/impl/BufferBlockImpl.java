@@ -12,6 +12,10 @@ public class BufferBlockImpl<E> extends AbstractBlock implements BufferBlock<E>
     @SuppressWarnings("unchecked")
     public BufferBlockImpl(int size)
     {
+        if (size < 1)
+        {
+            throw new IllegalArgumentException("buffer capacity must be at least 1, was " + size);
+        }
         array = (E[]) new Object[size];
         this.size = 0;
         this.first = 0;

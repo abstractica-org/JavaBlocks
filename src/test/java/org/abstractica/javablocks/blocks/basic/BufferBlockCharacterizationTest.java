@@ -138,15 +138,11 @@ class BufferBlockCharacterizationTest
 		assertEquals("b", buffer.get());
 	}
 
-	/** Wart: a capacity-0 buffer is constructible and every put on it blocks forever. */
+	/** J6: a capacity below 1 is refused when the buffer is built (v0.2.0 built it, and every put hung). */
 	@Test
-	void capacityZeroBufferBlocksEveryPut() throws InterruptedException
+	void capacityBelowOneIsRefusedAtConstruction()
 	{
-		BufferBlock<Integer> buffer = BasicBlocks.getBufferBlock(0);
-		assertEquals(0, buffer.getCapacity());
-		Thread producer = Async.daemon(() -> buffer.put(1));
-		assertTrue(Async.stillRunningAfter(producer, 200));
-		producer.interrupt();
-		assertTrue(Async.finishesWithin(producer, 1000));
+		assertThrows(IllegalArgumentException.class, () -> BasicBlocks.getBufferBlock(0));
+		assertThrows(IllegalArgumentException.class, () -> BasicBlocks.getBufferBlock(-1));
 	}
 }
