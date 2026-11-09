@@ -7,6 +7,16 @@ pushed). The owner works on more than one machine, so `origin/main` may
 trail the checkout you are in: run `git log origin/main..main` before
 trusting State and Scope below.
 
+**Migrated to the foundation 2026-11-09** (branch
+`migrate-20261109-0940`, one PR for the owner): new standard
+`README.md` (the old two-line one moved to `docs/original-readme.md`),
+both decision records reshaped to Pros/Cons lists (content unchanged),
+`knowledge/_index.md`'s stale path list corrected. The project is
+**parked** for driven runs until the owner answers
+`decisions/2026-11-09-approve-the-autopilot-delegation-for-javablocks.md`
+— approving it writes `tools/autopilot/DELEGATION.md`. Two session logs
+await the crystallizer (`kt check` warning).
+
 You are in **JavaBlocks**, the owner's block-programming library for
 multithreaded pipelines. Read `design/decision-log.md` **J1** (charter),
 **J2** (pom), **J3** (characterization tests) first.
@@ -25,7 +35,7 @@ multithreaded pipelines. Read `design/decision-log.md` **J1** (charter),
   Every test was proven able to fail via 13 one-line mutations (J3).
 - The settled thread model and the v0.2.0 `stop()` contract are
   crystallized at `knowledge/thread-model/`.
-- **Waiting on the owner:**
+- **Waiting on the owner:** the autopilot delegation record above; and
   `decisions/2026-09-11-the-diverged-working-copy.md` was carried out
   by the 2026-09-23 hibernate exactly as its recommendation says
   (local commits read, rebased onto main, session logs committed) but
