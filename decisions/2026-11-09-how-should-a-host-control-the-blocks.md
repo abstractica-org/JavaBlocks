@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-how-should-a-host-control-the-blocks
 title: "How should a host control the blocks' log output?"
-status: proposed
+status: ruled
 stakes: medium
 confidence: 75
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: eba163f7-4766-4239-b515-dcd76034fa77
 recommends: settable-defaults-output-unchanged
@@ -68,3 +69,7 @@ Settable defaults, output unchanged. It removes what makes the singletons a wart
 ## If nothing is decided
 
 The reporters stay fixed; hosts quiet blocks one at a time. Runs move on to the other cleanups; goal 1 cannot be called done until this is ruled.
+
+## Ruling
+
+**Settable defaults, output unchanged** (`settable-defaults-output-unchanged`). Tog, 2026-11-09, from the project pages.
