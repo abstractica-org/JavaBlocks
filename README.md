@@ -23,7 +23,9 @@ characterization tests that describe its concurrency behaviour. Since
 then, on `main`, every known defect has been fixed one at a time: thread
 blocks always stop, and the buffer, distributor, map, delay, reporter
 and ping-pong cleanups are in (43 tests). Next comes a declarative way
-to assemble pipelines. (2026-11-09)
+to assemble pipelines: its form is chosen (a pipeline described as
+plain data, written by a typed Java builder), and its names are being
+decided. (2026-11-09)
 
 ## Quick start
 

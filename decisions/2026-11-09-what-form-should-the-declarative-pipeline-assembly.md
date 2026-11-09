@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-what-form-should-the-declarative-pipeline-assembly
 title: What form should the declarative pipeline assembly take from the outside?
-status: ruled
+status: done
 stakes: high
 confidence: 80
 opened: 2026-11-09
@@ -94,3 +94,7 @@ Nothing toward goal 2 is built. The library stays as it is (all defects fixed, 4
 ## Ruling
 
 **Design as data, with a typed Java builder on top** (`design-as-data-with-a-typed-java-builder-on-top`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-09, autopilot run 4: the form is recorded as J12 in `design/decision-log.md`, and the three follow-ups this record named are proposed as their own records: the public names (`decisions/2026-11-09-what-should-the-pipeline-builder-s-public-names.md`), how a Design names Java functions (`decisions/2026-11-09-how-should-a-pipeline-design-name-the.md`) and the map block's per-key slot (`decisions/2026-11-09-how-should-the-map-block-s-per-key-handler.md`). Building starts once those are ruled.

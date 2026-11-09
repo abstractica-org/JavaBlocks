@@ -23,7 +23,10 @@ the executable form of this node — change them and this text together.
 - **Blocking lives in `get`/`put`**, concretely in the buffers (full →
   put blocks, empty → get blocks, both interruptible), the keyboard,
   and the sockets. `BufferBlock` is the inverse joint of a ThreadBlock:
-  push in, pull out, and the only back-pressure point.
+  push in, pull out, and the only back-pressure point. A buffer of
+  capacity below 1 is refused when built (J6); in `v0.2.0` capacity 0
+  was accepted and hung the first `put`, and a negative capacity threw
+  `NegativeArraySizeException`.
 - `DistributorBlock` and `MapBlock` forward on the caller's thread;
   the map creates each handler on the thread of the put that first saw
   the key, and `handler.put` runs outside the map lock, so handlers

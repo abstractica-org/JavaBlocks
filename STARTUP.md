@@ -1,14 +1,15 @@
 # STARTUP — JavaBlocks
 
-Rewritten 2026-11-09 by autopilot run 3 (report:
-`tools/autopilot/runs/0003.md`). The owner works on more than one
+Rewritten 2026-11-09 by autopilot run 4 (report:
+`tools/autopilot/runs/0004.md`). The owner works on more than one
 machine, so `origin/main` may trail the checkout you are in: run
 `git log origin/main..main` before trusting what follows.
 
 You are in **JavaBlocks**, the owner's block-programming library for
 multithreaded pipelines. Read `design/decision-log.md` first: **J1** is
 the charter, **J2** the pom, **J3** the characterization tests, **J4**
-the stop() fix, **J5–J11** the seven cleanups. Driven runs work within
+the stop() fix, **J5–J11** the seven cleanups, **J12** the assembly's
+ruled form. Driven runs work within
 `tools/autopilot/DELEGATION.md`.
 
 ## State
@@ -23,20 +24,31 @@ the stop() fix, **J5–J11** the seven cleanups. Driven runs work within
   about 6 s. No release since `v0.2.1`; releases are Tog's call.
 - **Goal 1 is done** (`tools/autopilot/GOALS.md`): every known wart is
   fixed. Every cleanup record is `status: done`.
-- **Goal 2 waits on one record:**
-  `decisions/2026-11-09-what-form-should-the-declarative-pipeline-assembly.md`
-  (`status: proposed`) — the assembly's overall form; recommended
-  "Design as data, with a typed Java builder on top". Do not propose it
-  again.
+- **Goal 2's form is ruled and logged (J12):** a Design as plain data
+  (nodes with id, kind, settings; wires port to port), a typed Java
+  builder on top, building through the existing factories with no block
+  changed. The form record is `status: done`.
+- **Goal 2 waits on three records (run 4), all `proposed`; do not
+  propose them again:**
+  - `decisions/2026-11-09-what-should-the-pipeline-builder-s-public-names.md`
+    — recommends package `design`, `Design`/`Designer`/`Pipeline`, ports
+    `PushOut`/`PushIn`/`PullOut`/`PullIn`, handles `<Kind>Node`, kind
+    names after the factory methods.
+  - `decisions/2026-11-09-how-should-a-pipeline-design-name-the.md` —
+    recommends names in the Design, objects in a `Catalogue`, the
+    builder auto-naming lambdas `<node>.function`.
+  - `decisions/2026-11-09-how-should-the-map-block-s-per-key-handler.md`
+    — recommends a nested Design copied per key (`perKey`, `entry()`,
+    `hostSinkPerKey`); the factory-object option is the honest smaller
+    alternative.
 
 ## Scope for the next session
 
-1. **If the form record is ruled** (wakeup lists it under "Ruled …"):
-   carry out what it decides — that is, propose the follow-up records it
-   names (exact class/method names; how the viewer names Java functions;
-   the map block's per-key sub-design), and build only what the rulings
-   cover, starting with a J entry. Every public name is Tog's (delegation).
-2. **If not ruled:** housekeeping only; end blocked on that record.
+1. **If the names and catalogue records are ruled:** write the next J
+   entry, then build the core test-first (Design, builder, Pipeline),
+   starting with the kinds FirstTest and the UDP examples need; use
+   exactly the ruled names. The map node waits for its own ruling.
+2. **If not ruled:** housekeeping only; end blocked on those records.
 
 ## Facts not worth rediscovering
 
@@ -45,6 +57,12 @@ the stop() fix, **J5–J11** the seven cleanups. Driven runs work within
   adapter does the flipping, and the library keeps its names.
 - Only `ThreadBlock` owns a thread. See `knowledge/thread-model/`,
   which now also holds where map, distributor and ping-pong lock.
+- Every JavaBlocks connection is a push (a slot holding an Output gets
+  a block that is an Output) or a pull (the same for Input); today's
+  setters already refuse other pairings at compile time. The ping-pong
+  block takes its sender in its constructor, not a setter, so the
+  builder must build the sender first. `keyboard` and `console` are
+  program-wide singletons.
 - An `assemblies/` package already exists (`Assemblies.getBufferedSocketBlock`,
   a ready-made composite); the new builder must not collide with it.
 - The ping-pong keep-alive needs ticks at most about 2 × timeout apart:
