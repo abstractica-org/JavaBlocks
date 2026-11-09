@@ -297,3 +297,39 @@ thread in front of the distributor. Single-producer order is unchanged
 in a slow output, `addOutput` and `removeOutput` return at once; the
 added output does not receive the in-flight message, the removed one
 does. Proven able to fail against the v0.2.0 distributor.
+
+## J9 — the delay functions return early on an interrupt and keep the flag (owner ruling, 2026-11-09; carried out by autopilot run 3)
+
+Carries out `decisions/2026-11-09-what-should-the-delay-functions-do-when.md`,
+ruled **return early and keep the flag**. J3 wart 3: `DelayFunction` and
+`getRandomDelayFunction` caught `InterruptedException`, threw it away
+(clearing the thread's interrupted flag) and slept out the full delay.
+
+**Change, in both `DelayFunctionImpl` and `RandomDelayFunctionImpl`:**
+on an interrupt they re-set the thread's interrupted flag and return the
+item at once. This is Java's convention for code that cannot throw
+`InterruptedException` (they are plain `Function`s). A delay called with
+the flag already set therefore returns at once.
+
+**Effect on the timer idiom:** with the delay on the thread block's
+input side, `stop()` no longer waits out the remaining delay. The thread
+block clears the flag before its put (J4), so the tick in hand is still
+delivered exactly once and
+`constantPlusPullSideDelayPlusThreadTicksOnceMoreAfterStopThenStops`
+stays green unchanged except its javadoc. With the delay on the output
+side (FirstTest), stop() already waits for the in-flight put by design
+(J4) and the interrupt never reaches the delay; nothing changes there.
+
+**Accepted consequence (the record named it):** if some other caller's
+thread is interrupted mid-delay, the item goes downstream early with the
+flag set, and a full buffer there refuses it with `InterruptedException`
+instead of waiting.
+
+**Tests flipped in the same commit:**
+`FunctionBlocksCharacterizationTest.delayFunctionAbsorbsInterruptsAndDelaysTheFullTime`
+→ `delayFunctionReturnsEarlyOnAnInterruptAndKeepsTheFlag`, and
+`randomDelayFunctionAbsorbsInterruptsAndDelaysTheFullTime` (pinned in the
+commit before this one, since the random delay had no test) →
+`randomDelayFunctionReturnsEarlyOnAnInterruptAndKeepsTheFlag`. Each
+proven able to fail: against the old code (late return), and against a
+fix that returns early but drops the flag.
