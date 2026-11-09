@@ -20,6 +20,12 @@ ruled that it gains a **data-driven assembly** — a declarative way to
 build a pipeline — which is the step that lets the viewer design
 JavaBlocks pipelines rather than only draw them.
 
+**Order of work** (Tog, 2026-11-09, `tools/autopilot/GOALS.md`):
+first the known warts, each fixed or ruled to stay, one ruling each
+(`decisions/2026-11-09-*.md`); then the declarative assembly; then the
+viewer adapter, which waits for `wiring-playground`'s graph contract.
+The base is clean before any public API is built on it.
+
 ## The model in one paragraph
 
 A block is a Java object. `Output<E>` is a sink (`put`), `Input<E>` is
