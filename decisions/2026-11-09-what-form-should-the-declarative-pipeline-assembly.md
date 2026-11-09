@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-what-form-should-the-declarative-pipeline-assembly
 title: What form should the declarative pipeline assembly take from the outside?
-status: proposed
+status: ruled
 stakes: high
 confidence: 80
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: 6ed5b789-0d17-49e0-954b-b0784f4df23f
 recommends: design-as-data-with-a-typed-java-builder-on-top
@@ -89,3 +90,7 @@ Design as data, with a typed Java builder on top. Only this option gives both th
 ## If nothing is decided
 
 Nothing toward goal 2 is built. The library stays as it is (all defects fixed, 43 tests), and runs do only housekeeping until you rule.
+
+## Ruling
+
+**Design as data, with a typed Java builder on top** (`design-as-data-with-a-typed-java-builder-on-top`). Tog, 2026-11-09, from the project pages.
