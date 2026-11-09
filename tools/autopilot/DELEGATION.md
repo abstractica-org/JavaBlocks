@@ -20,6 +20,8 @@ building against.
   `src/main`.
 - Write decision records proposing the next cleanup or design step.
 - Work on a branch and open a pull request for Tog to review.
+- Merge its own pull request into `main` once a fresh-context review
+  approves it (Tog, 2026-11-09).
 
 ## Always goes to Tog
 
@@ -32,6 +34,5 @@ building against.
 - The dependency list, the Java version, the build.
 - Anything touching `wiring` or `wiring-playground`, or the viewer's
   graph contract.
-- Merging to `main`.
 
 _Approved by Tog, 2026-11-09, as drafted in decisions/2026-11-09-approve-the-autopilot-delegation-for-javablocks.md._
