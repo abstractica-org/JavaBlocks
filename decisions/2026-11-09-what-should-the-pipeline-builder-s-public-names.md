@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-what-should-the-pipeline-builder-s-public-names
 title: "What should the pipeline builder's public names be?"
-status: proposed
+status: ruled
 stakes: high
 confidence: 82
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: 184507c0-5a81-4fd6-9d06-8dee2a5ba320
 recommends: design-designer-pipeline-with-push-and-pull-ports
@@ -98,3 +99,7 @@ Design, Designer, Pipeline, with push and pull ports. It keeps the word your rul
 ## If nothing is decided
 
 Nothing of the assembly is built, because every class in it has a public name. Runs do housekeeping only.
+
+## Ruling
+
+**Design, Designer, Pipeline, with push and pull ports** (`design-designer-pipeline-with-push-and-pull-ports`). Tog, 2026-11-09, from the project pages.
