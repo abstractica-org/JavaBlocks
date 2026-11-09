@@ -414,3 +414,33 @@ against the old timer connector. That timing test cannot tell a factor of
 without it: the window lies between `MapBlock` releasing its lock and the
 new handler's first `put`, and nothing outside the block can hold a
 thread there (the same limit J4 recorded for two of its guards).
+
+## J12 — the declarative assembly's form: a Design as data, a typed Java builder on top (owner ruling, 2026-11-09; recorded by autopilot run 4)
+
+Carries out `decisions/2026-11-09-what-form-should-the-declarative-pipeline-assembly.md`,
+ruled **design as data, with a typed Java builder on top**. Goal 2 has
+its outside form:
+
+- **The core is plain data.** A Design is nodes (id, kind, settings)
+  and wires (port to port). It can be read back, checked and drawn; it
+  is the "reified design" J1 asks for, and the viewer adapter (goal 3)
+  only has to turn the viewer's graph into one.
+- **A typed Java builder sits on top** and does nothing the core cannot:
+  every builder call records nodes and wires in a Design (the
+  foundation's plumbing-and-porcelain pattern, so the layers cannot
+  drift). Java authors keep compile-time types on their connections.
+- **Building goes through the existing factories** (`BasicBlocks`,
+  `UDPBlocks`, the ping-pong block). No block changes; the 43 tests keep
+  guarding the behaviour, and a pipeline built through the assembly
+  behaves as the same pipeline wired by hand.
+- **Build-time checks** (an unwired slot, a wire no thread drives) are
+  the builder's to decide while building, as the record said; each one
+  turns a failure inside a worker thread into an error at build time.
+
+**Not yet ruled, so nothing is built:** the record names three
+follow-ups, each a decision record of its own, proposed by run 4 —
+the public names (package, types, methods, the kinds' names); how a
+Design names the Java functions and host objects it uses (the
+catalogue); and the map block's per-key handler slot. Every public name
+is the owner's (delegation). Code starts with the next J entry, after
+the names are ruled.
