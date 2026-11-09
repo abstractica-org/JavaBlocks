@@ -63,23 +63,34 @@ class DistributorBlockCharacterizationTest
 		assertEquals(List.of(1, 2), b.items(), "clearing the copy did not touch the block");
 	}
 
-	/** Wart: put holds the block's monitor while forwarding, so a slow output blocks addOutput/removeOutput. */
+	/**
+	 * J8: put forwards from a snapshot, outside the lock, so a slow output blocks neither addOutput nor
+	 * removeOutput. The output added mid-forward misses the in-flight item; the one removed still gets it.
+	 * (v0.2.0 held the monitor for the whole forward: addOutput waited for the slow output.)
+	 */
 	@Test
-	void putHoldsTheMonitorWhileForwarding() throws InterruptedException
+	void addAndRemoveProceedWhileAPutForwardsFromItsSnapshot() throws InterruptedException
 	{
 		BlockingSink<Integer> slow = new BlockingSink<>();
+		Sink<Integer> removedMidForward = new Sink<>();
+		Sink<Integer> addedMidForward = new Sink<>();
 		DistributorBlock<Integer> distributor = BasicBlocks.getDistributorBlock();
 		distributor.addOutput(slow);
+		distributor.addOutput(removedMidForward);
 
 		Thread producer = Async.daemon(() -> distributor.put(1));
 		assertTrue(slow.enteredWithin(1000));
 
-		Thread adder = Async.daemon(() -> distributor.addOutput(new Sink<>()));
-		assertTrue(Async.stillRunningAfter(adder, 200), "addOutput waits for the in-flight put");
+		Thread adder = Async.daemon(() -> distributor.addOutput(addedMidForward));
+		assertTrue(Async.finishesWithin(adder, 1000), "addOutput does not wait for the in-flight put");
+		Thread remover = Async.daemon(() -> distributor.removeOutput(removedMidForward));
+		assertTrue(Async.finishesWithin(remover, 1000), "removeOutput does not wait for the in-flight put");
+		assertEquals(List.of(slow, addedMidForward), List.copyOf(distributor.getOutputs()));
 
 		slow.release();
 		assertTrue(Async.finishesWithin(producer, 1000));
-		assertTrue(Async.finishesWithin(adder, 1000));
-		assertEquals(2, distributor.getOutputs().size());
+		assertEquals(List.of(1), slow.delivered.items());
+		assertEquals(List.of(1), removedMidForward.items(), "removed mid-forward: still gets the in-flight item");
+		assertEquals(List.of(), addedMidForward.items(), "added mid-forward: not in the put's snapshot");
 	}
 }
