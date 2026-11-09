@@ -1,10 +1,11 @@
 ---
 id: 2026-11-09-set-the-goals-for-javablocks
 title: Set the goals for javablocks
-status: proposed
+status: ruled
 stakes: medium
 confidence: 82
 opened: 2026-11-09
+ruled: 2026-11-09
 repo: javablocks
 by: d60b5023-7996-4e1a-baac-b7fff965cdfb
 recommends: assembly-first-cleanups-alongside
@@ -75,3 +76,7 @@ Go with "Assembly first, cleanups alongside". It is your charter's order, and to
 ## If nothing is decided
 
 Runs keep to housekeeping and the rulings you have already made. With the stop() fix done, that leaves almost nothing, so the driver should hold the project until you rule.
+
+## Ruling
+
+**Cleanups first, then the assembly** (`cleanups-first-then-the-assembly`). Tog, 2026-11-09, from the project pages.
