@@ -49,6 +49,15 @@ the executable form of this node.
   copy is removed (pinned) or the pipeline stopped, as wired by hand:
   remove when the copy is quiet. A copy cannot remove itself from its
   own thread (a thread cannot stop itself).
+- **Refusals are early and leave nothing behind**: what the data can
+  show wrong is refused at build, not at the first message (a capacity-0
+  buffer inside a map's nested Design included). Host code the data
+  cannot see fails at run time, in the put that runs it: a key function
+  that throws, or a `hostSinkPerKey` function whose result is no Output
+  or that throws (J14). A refused map merges nothing into the catalogue; the Pipeline copies the
+  catalogue at build, so later edits to the caller's catalogue do not
+  reach it. A removed copy stays tracked until its stop has finished,
+  so an interrupted stopper loses no copy.
 - **Not built:** `udpSocket`, which waits on
   `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md` (a
   thread reading a UDP socket never stops).

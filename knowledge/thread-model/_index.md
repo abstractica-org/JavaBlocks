@@ -1,6 +1,6 @@
 ---
 type: project-node
-summary: "The settled thread model: only ThreadBlock owns a thread, blocking lives in get/put, stop() waits for the in-flight put then exits for every input kind (J4), and where map, distributor and ping-pong lock (J5–J11) — all pinned by tests."
+summary: "Thread model: only ThreadBlock owns a thread, blocking lives in get/put, stop() waits for the in-flight put then exits (J4), where map, distributor and ping-pong lock (J5–J11); all pinned, and how to pin a blocked thread without a race."
 verified: 2026-11-10
 related:
   - path: ..
@@ -91,3 +91,8 @@ the worker was parked in an interruptible `get()`; otherwise it
 re-waited in 5 s rounds or deadlocked, and a dead worker kept reporting
 running. Ruled fixed in `decisions/2026-09-23-fix-thread-block-stop.md`;
 the change and its tests are J4 in `design/decision-log.md`.
+
+## Pinning a blocked thread
+
+Force each step (wait until the thread is parked in `put`, then act),
+never sleep and hope: a J14 pin written with sleeps failed half its runs.
