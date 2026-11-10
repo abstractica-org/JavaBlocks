@@ -41,7 +41,7 @@ import static org.abstractica.javablocks.design.Kinds.*;
  * <p>The compiler accepts only push-to-push and pull-to-pull wires; what it cannot see (a slot left
  * unwired, a single slot wired twice) is refused when the Design is built.
  */
-public class Designer
+public sealed class Designer permits PerKeyDesigner
 {
 	private final List<Design.Node> nodes = new ArrayList<>();
 	private final List<Design.Wire> wires = new ArrayList<>();

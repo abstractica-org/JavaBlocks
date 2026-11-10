@@ -358,6 +358,10 @@ class MapNodeTest
 	void aThreadPuttingIntoARemovedFullCopyStaysBlocked() throws InterruptedException
 	{
 		// Pinned as a known limit (J14): the removed copy's buffer is full and nothing drains it.
+		// Every step is forced: the worker holds a:0 in the sink, a:1 fills the buffer, the feeder waits
+		// to put a:2 inside the copy; the removal waits for the worker's put; only then is it let go.
+		java.util.concurrent.CountDownLatch gate = new java.util.concurrent.CountDownLatch(1);
+		java.util.concurrent.CountDownLatch entered = new java.util.concurrent.CountDownLatch(1);
 		Sink<String> received = new Sink<>();
 		Designer d = new Designer();
 		var peers = d.map("peers", (String m) -> keyOf(m), perKey ->
@@ -366,7 +370,8 @@ class MapNodeTest
 			var worker = perKey.<String>thread("worker");
 			var show = perKey.hostSinkPerKey("show", key -> (Output<String>) item ->
 			{
-				Thread.sleep(50);
+				entered.countDown();
+				gate.await();
 				received.put(item);
 			});
 			perKey.wire(perKey.entry(), buffer.in());
@@ -380,18 +385,28 @@ class MapNodeTest
 		{
 			try
 			{
-				for (int i = 0; i < 20; i++) map.put("a:" + i);
+				for (int i = 0; i < 3; i++) map.put("a:" + i);
 			} catch (InterruptedException e)
 			{
 				// released by the test
 			}
 		});
 		feeder.start();
-		assertTrue(received.receivedWithin(1, 2000));
+		assertTrue(entered.await(2, java.util.concurrent.TimeUnit.SECONDS));
+		assertTrue(Async.becomesTrueWithin(() -> feeder.getState() == Thread.State.WAITING, 2000));
+		Thread.sleep(100); // past any wake-up still on its way: the feeder now waits to put a:2
+		assertEquals(Thread.State.WAITING, feeder.getState());
 
-		map.removeHandler("a");
-		feeder.join(2000); // undisturbed, the 20 items take about 1 s
+		Thread remover = new Thread(() -> map.removeHandler("a"));
+		remover.start();
+		assertTrue(Async.becomesTrueWithin(() -> remover.getState() == Thread.State.WAITING, 2000));
+		gate.countDown();
+		remover.join(2000);
+		assertFalse(remover.isAlive());
+
+		feeder.join(500);
 		assertTrue(feeder.isAlive(), "blocked putting into the removed copy");
+		assertEquals(List.of("a:0"), received.items());
 		feeder.interrupt();
 		feeder.join(2000);
 		assertFalse(feeder.isAlive());

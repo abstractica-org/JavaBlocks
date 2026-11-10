@@ -570,7 +570,8 @@ stay as they are.
 - **Names.** Node ids inside a nested Design are its own: `show` inside
   may also be an id outside. The nested Designer writes into a copy of
   the outer catalogue, merged back only once the whole map is accepted
-  (a refused map leaves the catalogue as it was), and prefixes its
+  (a refused map adds none of its own names; what its lambda wrote
+  through the outer Designer stays), and prefixes its
   automatic names with the map's id (`peers.show.object`); a name given
   explicitly is used as given. A map whose lambda takes the map's own id,
   or a catalogue name, from the outer Designer is refused before anything
@@ -628,7 +629,8 @@ above (`perKey` setting, `entry` node and kind, port `entry.out`); the
 handle `MapNode<K, E>` (`in()` and the reporter ports); the named form
 `map(id, name, keyFn, perKey)`, like push and pull; the nested builder
 type `PerKeyDesigner<K, E>`, a `Designer` with `entry()` and
-`hostSinkPerKey` added — so `Designer` is no longer `final`;
+`hostSinkPerKey` added — so `Designer` is no longer `final` but
+`sealed`, permitting only `PerKeyDesigner`;
 `Pipeline.block(map)` returns the `MapBlock`, whose `getAllHandlers()`
 and `removeHandler` give a host each copy's key and its removal, but not
 the copy's blocks: nothing inside a copy is reachable through
