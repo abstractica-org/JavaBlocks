@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-how-should-the-map-block-s-per-key-handler
 title: "How should the map block's per-key handler slot be filled in a pipeline Design?"
-status: ruled
+status: done
 stakes: medium
 confidence: 80
 opened: 2026-11-09
@@ -81,3 +81,7 @@ The rest of the builder can still be built once the names and catalogue records 
 ## Ruling
 
 **A nested Design, copied once per key** (`a-nested-design-copied-once-per-key`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-10, autopilot run 6: the map node is built as ruled (J14). `d.map(id, keyFn, perKey -> { ... })` with `perKey.entry()` and `perKey.hostSinkPerKey(...)`; the nested Design is checked with the outer one, copied and started once per key, and stopped with the pipeline or on `removeHandler`. 12 tests, each proven able to fail.
