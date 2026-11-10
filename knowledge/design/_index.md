@@ -1,6 +1,6 @@
 ---
 type: project-node
-summary: "The declarative assembly (J12, J13): a Design as plain data, a Catalogue of named Java objects, the typed Designer that writes a Design, and a Pipeline built from it through the existing factories; the whole Design is checked before anything is built and every problem is reported at once."
+summary: "The declarative assembly (J12, J13): a Design as plain data, a Catalogue of named Java objects, the typed Designer, and a Pipeline built through the existing factories; a Design is checked whole and every problem reported at once."
 verified: 2026-11-10
 related:
   - path: ..
