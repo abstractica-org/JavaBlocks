@@ -680,6 +680,7 @@ needs no socket, so it goes first.
   short tick.
 - **Tests.** `FirstTestTest` (3) builds `FirstTest.design` with a host
   source and a sink: a ping from a peer is answered with a pong through
-  the sender; with a short timeout and tick, the timer pings a quiet
-  peer; the pipeline stops. Proven able to fail by one-line mutations of
+  the sender; with a short timeout and tick, the timer pings a peer
+  quiet for longer than the timeout and not before; the pipeline stops
+  promptly with a short tick. Proven able to fail by one-line mutations of
   `FirstTest.design`.

@@ -53,10 +53,13 @@ class FirstTestTest
 	{
 		BufferBlock<String> commands = BasicBlocks.getBufferBlock(4);
 		Sink<String> sent = new Sink<>();
-		build(commands, sent, 100L, 20L);
+		build(commands, sent, 400L, 20L);
 		pipeline.start();
 
 		commands.put("peer:PING");
+		assertTrue(sent.receivedWithin(1, 2000));
+		Thread.sleep(200); // ten ticks, half the timeout
+		assertFalse(sent.items().contains("peer:PING"), "a peer quiet for less than the timeout is not pinged yet");
 		assertTrue(Async.becomesTrueWithin(() -> sent.items().contains("peer:PING"), 2000),
 				"a peer quiet for longer than the timeout is pinged");
 	}
@@ -74,6 +77,6 @@ class FirstTestTest
 		long started = System.nanoTime();
 		pipeline.stop();
 		assertFalse(pipeline.isRunning());
-		assertTrue(System.nanoTime() - started < 2_000_000_000L, "stop waits at most one 200 ms tick");
+		assertTrue(System.nanoTime() - started < 2_000_000_000L, "stop waits for the 200 ms tick in flight, not longer (2 s allowed for slow machines)");
 	}
 }

@@ -49,9 +49,11 @@ the executable form of this node.
   copy is removed (pinned) or the pipeline stopped, as wired by hand:
   remove when the copy is quiet. A copy cannot remove itself from its
   own thread (a thread cannot stop itself).
-- **Refusals are early and leave nothing behind**: everything a Design
-  can be refused for is refused at build, not at the first message (a
-  capacity-0 buffer inside a map's nested Design included); a refused
+- **Refusals are early and leave nothing behind**: what the data can
+  show wrong is refused at build, not at the first message (a capacity-0
+  buffer inside a map's nested Design included); only a `hostSinkPerKey`
+  function's own result (not an Output, or a throw) fails later, at the
+  first put for that key (J14); a refused
   map merges nothing into the catalogue; the Pipeline copies the
   catalogue at build, so later edits to the caller's catalogue do not
   reach it. A removed copy stays tracked until its stop has finished,
