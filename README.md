@@ -23,8 +23,9 @@ characterization tests that describe its concurrency behaviour. Since
 then, on `main`, every known defect has been fixed one at a time, and
 a declarative way to assemble pipelines has arrived: a pipeline written
 as plain data by a typed Java builder, including maps that run one
-small pipeline per key (`design` package, 94 tests in all). Still to
-come: the UDP socket, and the demo programs rebuilt through it.
+small pipeline per key (`design` package, 97 tests in all). The
+ping-pong demo is now built that way; still to come: the UDP socket,
+and the UDP demos rebuilt through it.
 (2026-11-10)
 
 ## Quick start

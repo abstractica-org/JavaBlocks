@@ -31,7 +31,8 @@ typed Java builder on top (J12) — and its names, catalogue and map slot
 are ruled (J13). The core is built in `design/` (`Design`, `Catalogue`,
 `Designer`, `Pipeline`, push/pull ports, every kind but `udpSocket`;
 the map node as a nested Design per key, J14); the socket node waits on
-a newly found wart (a thread reading a UDP socket never stops).
+a newly found wart (a thread reading a UDP socket never stops). FirstTest
+is built through the Design (J15); the UDP examples wait on the socket.
 
 ## The model in one paragraph
 
@@ -57,7 +58,7 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
   runnable check), `examples/`, `reporter/`, and `design/` — the
   declarative assembly (J13).
-- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (50: 29 for the core, 21 for the map node); see `design/` in the tree.
+- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (50: 29 for the core, 21 for the map node), and `FirstTestTest` (3, J15: FirstTest built through the Design); see `design/` in the tree.
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.
