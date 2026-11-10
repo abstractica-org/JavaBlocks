@@ -546,3 +546,65 @@ pipelines wired by hand (functions, buffers, if, distributor, variable,
 pull chains, ping-pong, reporter ports); a Design written as plain data
 builds with a catalogue; every build-time refusal above. No existing test
 changes, and `src/main` outside the new package is untouched.
+
+## J14 — the map node: a nested Design, copied once per key (owner ruling, 2026-11-09; carried out by autopilot run 6)
+
+Carries out `decisions/2026-11-09-how-should-the-map-block-s-per-key-handler.md`,
+ruled **a nested Design, copied once per key**, with the record's own
+words: `d.map(id, keyFn, perKey -> { ... })`, `perKey.entry()` (this
+key's messages) and `perKey.hostSinkPerKey(id, key -> output)` (a host
+object made from the key; kind `hostSinkPerKey` in the data). The map is
+built through the existing `BasicBlocks.getMapBlock` with a handler
+factory of the design package's own; `MapBlock` and every other block
+stay as they are.
+
+**Inside decisions** (the outside being ruled):
+
+- **In the data**, a `map` node has two settings: `function`, the
+  catalogue name of the key function (as for push and pull), and
+  `perKey`, the nested `Design` itself — the one setting that is not a
+  string, number or boolean, since it is data too. Inside it, `entry()`
+  is a node `entry` of kind `entry` with one push port `out`, which must
+  be wired; `entry` and `hostSinkPerKey` are allowed only inside a map's
+  nested Design, and refused anywhere else.
+- **Names.** Node ids inside a nested Design are its own: `show` inside
+  may also be an id outside. The nested Designer shares the outer
+  catalogue and prefixes its automatic names with the map's id
+  (`peers.show.object`), so they never collide; a name given explicitly
+  is used as given.
+- **Checking.** A nested Design is checked in full when the outer one is
+  built — every problem listed together, prefixed `in map 'peers':` —
+  so a broken handler design is refused before anything runs, not when
+  the first message arrives. Maps may nest.
+- **A copy per key.** On the first message with an unseen key, the map
+  (under its lock, on the putting thread, as `MapBlock` does today)
+  builds a fresh copy of the nested Design with that key, and starts its
+  thread blocks if the pipeline is running. Its handler forwards each
+  message to whatever `entry` is wired to. When a host calls
+  `removeHandler(key)`, the copy's threads are stopped (each as J4 pins
+  it) and a later message with that key builds a new copy.
+- **Starting and stopping the pipeline.** `Pipeline.start()` starts the
+  live copies, then its own thread blocks; `stop()` stops its own thread
+  blocks first (so they stop feeding the maps), then every live copy. A
+  copy made while the pipeline is stopped — a host putting straight into
+  the map — is built but not started, and starts with the next
+  `start()`. `isRunning()` counts the copies' threads too. A copy is
+  stopped outside the factory's lock, so a copy's thread that puts into
+  its own map cannot deadlock a stop.
+- **Errors at copy time.** A `hostSinkPerKey` function that throws, or
+  returns something that is not an `Output`, fails the `put` that
+  carried the new key, naming the node; the map keeps no handler for it.
+
+**Public details the run chose, open to the owner:** the data shape
+above (`perKey` setting, `entry` node and kind, port `entry.out`); the
+handle `MapNode<K, E>` (`in()` and the reporter ports) and the nested
+builder type `PerKeyDesigner<K, E>`, a `Designer` with `entry()` and
+`hostSinkPerKey` added — so `Designer` is no longer `final`;
+`Pipeline.block(map)` returns the `MapBlock`, and per-key copies are
+reached through it (`getAllHandlers()`), not through `Pipeline.block`.
+
+**Tests:** the Designer writes the nested data; per-key copies are made
+once per key, run on their own threads, are stopped with the pipeline
+and on `removeHandler`, and a copy made while stopped starts with the
+pipeline; the build-time refusals for nested Designs. Existing tests
+unchanged.
