@@ -60,7 +60,11 @@ completed `put`, and resets `running` whenever it ends. Pinned in
 - `stop()` stops the run it was called on; a `start()` during a
   pending stop is a no-op (and the setters throw), but one that wins
   the race after the old worker exits starts a new run that `stop()`
-  leaves alone. `stop()` from the worker thread itself hangs.
+  leaves alone. `stop()` from the worker thread itself hangs. A
+  `stop()` called by an already interrupted thread still marks the run
+  stopping (and interrupts a worker that is not mid-put) before its
+  wait or join throws: the worker ends on its own, only the waiting is
+  skipped (seen building J14, whose pipeline keeps such a copy tracked).
 - `isRunning()` never blocks behind `stop()`, and turns false when the
   worker ends for any reason. A downstream `RuntimeException` still
   kills the worker (rethrown, wrapped — also while a stop waits for that

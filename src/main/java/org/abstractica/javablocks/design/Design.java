@@ -7,7 +7,8 @@ import java.util.Objects;
 /**
  * A pipeline described as plain data: nodes (an id, a kind and settings) and wires from port to
  * port. It holds no Java objects: a function, predicate, protocol or host object appears only as a
- * name, and {@link #build(Catalogue)} looks the names up in a {@link Catalogue}.
+ * name, and {@link #build(Catalogue)} looks the names up in a {@link Catalogue}. A map node's
+ * {@code perKey} setting holds a nested Design, data too: the pipeline built once for each key.
  *
  * <p>A Design can be written by a {@link Designer} or by hand (or read from elsewhere); either way
  * {@code build} checks it in full and refuses it, listing every problem, before anything is made.
@@ -26,7 +27,7 @@ public record Design(List<Node> nodes, List<Wire> wires)
 	/**
 	 * Builds the pipeline this Design describes, through the library's existing factories.
 	 *
-	 * @param catalogue the Java objects the Design names
+	 * @param catalogue the Java objects the Design names; the pipeline keeps a copy
 	 * @throws IllegalArgumentException listing every problem, if the Design or the catalogue is not
 	 *                                  buildable
 	 */
@@ -40,7 +41,8 @@ public record Design(List<Node> nodes, List<Wire> wires)
 	 *
 	 * @param id       unique within the Design
 	 * @param kind     one of the kinds, e.g. {@code "thread"}, {@code "push"}, {@code "buffer"}
-	 * @param settings plain data only: strings, numbers, booleans; catalogue names are strings
+	 * @param settings plain data only: strings, numbers, booleans (catalogue names are strings), and a
+	 *                 map's nested Design under {@code perKey}
 	 */
 	public record Node(String id, String kind, Map<String, Object> settings)
 	{

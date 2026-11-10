@@ -546,3 +546,105 @@ pipelines wired by hand (functions, buffers, if, distributor, variable,
 pull chains, ping-pong, reporter ports); a Design written as plain data
 builds with a catalogue; every build-time refusal above. No existing test
 changes, and `src/main` outside the new package is untouched.
+
+## J14 — the map node: a nested Design, copied once per key (owner ruling, 2026-11-09; carried out by autopilot run 6)
+
+Carries out `decisions/2026-11-09-how-should-the-map-block-s-per-key-handler.md`,
+ruled **a nested Design, copied once per key**, with the record's own
+words: `d.map(id, keyFn, perKey -> { ... })`, `perKey.entry()` (this
+key's messages) and `perKey.hostSinkPerKey(id, key -> output)` (a host
+object made from the key; kind `hostSinkPerKey` in the data). The map is
+built through the existing `BasicBlocks.getMapBlock` with a handler
+factory of the design package's own; `MapBlock` and every other block
+stay as they are.
+
+**Inside decisions** (the outside being ruled):
+
+- **In the data**, a `map` node has two settings: `function`, the
+  catalogue name of the key function (as for push and pull), and
+  `perKey`, the nested `Design` itself — the one setting that is not a
+  string, number or boolean, since it is data too. Inside it, `entry()`
+  is a node `entry` of kind `entry` with one push port `out`, which must
+  be wired; `entry` and `hostSinkPerKey` are allowed only inside a map's
+  nested Design, and refused anywhere else.
+- **Names.** Node ids inside a nested Design are its own: `show` inside
+  may also be an id outside. The nested Designer writes into a copy of
+  the outer catalogue, merged back only once the whole map is accepted
+  (a refused map adds none of its own names; what its lambda wrote
+  through the outer Designer stays), and prefixes its
+  automatic names with the map's id (`peers.show.object`); a name given
+  explicitly is used as given. A map whose lambda takes the map's own id,
+  or a catalogue name, from the outer Designer is refused before anything
+  merges. An outer id that itself contains a dot
+  (`peers.show`) can collide with such a name; the collision is refused
+  at once, when the map is written.
+- **Checking.** A nested Design is checked in full when the outer one is
+  built — every problem listed together, prefixed `in map 'peers':` —
+  so a broken handler design is refused before anything runs, not when
+  the first message arrives. For that, a buffer's capacity below 1
+  inside a nested Design is refused by the check, as the buffer itself
+  refuses it (J6); outside a map the buffer's own refusal at build time
+  stays as it was. The other kinds have no setting their factory
+  refuses. Maps may nest. The pipeline keeps its own copy of the
+  catalogue, since a map reads it on every new key.
+- **A copy per key.** On the first message with an unseen key, the map
+  (under its lock, on the putting thread, as `MapBlock` does today)
+  builds a fresh copy of the nested Design with that key, and starts its
+  thread blocks if the pipeline is running. Its handler forwards each
+  message to whatever `entry` is wired to. When a host calls
+  `removeHandler(key)`, the copy's threads are stopped (each as J4 pins
+  it) and a later message with that key builds a new copy. The copy
+  stays tracked until its stop has finished, so a removal by an
+  interrupted thread is finished by the pipeline's next `stop()`, and a
+  removed copy never starts again. The ruling also says a removed copy's
+  sockets are closed: there is no socket node yet (it waits on the
+  socket record), so that comes with it.
+- **Starting and stopping the pipeline.** `Pipeline.start()` starts the
+  live copies, then its own thread blocks; `stop()` stops its own thread
+  blocks first (so they stop feeding the maps), then every live copy. A
+  copy made while the pipeline is stopped — a host putting straight into
+  the map — is built but not started, and starts with the next
+  `start()`; copies that ran start again. `isRunning()` counts the
+  copies' threads too. A copy is stopped outside the factory's lock.
+- **Errors at copy time.** A `hostSinkPerKey` function that throws, or
+  returns something that is not an `Output`, fails the `put` that
+  carried the new key, naming the node; the map keeps no handler for it.
+  When that put comes from one of the pipeline's thread blocks, the
+  thread dies of the exception, as it does today for any runtime
+  exception thrown downstream of it.
+- **Known limits, from the thread model, not fixed here.** Removing a
+  handler stops its copy's threads as `ThreadBlock.stop()` does, so, as
+  with blocks wired by hand: a removal from one of the copy's own
+  threads hangs (a thread cannot stop itself); a thread blocked putting
+  into the removed copy's full buffer stays blocked, since nothing
+  drains it (pinned), and so does a later `Pipeline.stop()` if that
+  thread is the pipeline's; and after the pipeline stops, a host thread
+  blocked putting into a copy's full buffer stays blocked. The `map`
+  javadoc says so: remove a handler, or stop, when nothing is putting
+  into its copy. Draining or discarding a removed copy's buffers would
+  change `BufferBlock` and would be a ruling of its own.
+
+**Public details the run chose, open to the owner:** the data shape
+above (`perKey` setting, `entry` node and kind, port `entry.out`); the
+handle `MapNode<K, E>` (`in()` and the reporter ports); the named form
+`map(id, name, keyFn, perKey)`, like push and pull; the nested builder
+type `PerKeyDesigner<K, E>`, a `Designer` with `entry()` and
+`hostSinkPerKey` added — so `Designer` is no longer `final` but
+`sealed`, permitting only `PerKeyDesigner`;
+`Pipeline.block(map)` returns the `MapBlock`, whose `getAllHandlers()`
+and `removeHandler` give a host each copy's key and its removal, but not
+the copy's blocks: nothing inside a copy is reachable through
+`Pipeline.block`.
+
+**Tests** (21, each proven able to fail by a one-line mutation): the
+Designer writes the nested data, ids inside are their own, a given name
+is used as given, a refused map leaves the catalogue as it was, a dotted
+id's collision is refused; per-key copies are made once per key, run on
+their own threads, are stopped with the pipeline (after the thread
+feeding them) and on `removeHandler`, a removal by an interrupted
+thread is finished by the pipeline's stop, a copy made while stopped
+starts with the pipeline and copies that ran start again; maps nest; a
+per-key function returning no Output or throwing fails the put; the
+pinned limit above; the build-time refusals for nested Designs,
+including a capacity-0 buffer inside a map.
+Existing tests unchanged.

@@ -35,16 +35,25 @@ final class PipelineBuilder
 	/** For each ping-pong node, the node its {@code send} is wired to. */
 	private final Map<String, String> senders = new HashMap<>();
 	private final Map<String, Object> built = new LinkedHashMap<>();
+	/** The handler factories of the map nodes built here. */
+	private final List<PerKeyCopies<?, ?>> maps = new ArrayList<>();
+	/** True when this is a map's nested Design. */
+	private final boolean nested;
+	/** The key a nested Design's copy is built for; null otherwise. */
+	private final Object key;
 
-	private PipelineBuilder(Design design, Catalogue catalogue)
+	private PipelineBuilder(Design design, Catalogue catalogue, boolean nested, Object key)
 	{
 		this.design = design;
 		this.catalogue = catalogue;
+		this.nested = nested;
+		this.key = key;
 	}
 
 	static Pipeline build(Design design, Catalogue catalogue)
 	{
-		PipelineBuilder b = new PipelineBuilder(design, catalogue);
+		// A copy: the maps read it on later keys, from whichever thread brings them.
+		PipelineBuilder b = new PipelineBuilder(design, new Catalogue(catalogue), false, null);
 		b.check();
 		if (!b.problems.isEmpty())
 		{
@@ -52,7 +61,34 @@ final class PipelineBuilder
 		}
 		b.construct();
 		b.connect();
-		return new Pipeline(b.built);
+		return new Pipeline(b.built, b.maps);
+	}
+
+	/**
+	 * Builds one copy of a map's nested Design for {@code key}, not started; returns its entry's handler,
+	 * which holds the copy. The nested Design was checked when the outer one was built.
+	 */
+	static PerKeyCopies.Handler<?, ?> buildCopy(Design design, Catalogue catalogue, Object key)
+	{
+		PipelineBuilder b = new PipelineBuilder(design, catalogue, true, key);
+		b.check();
+		if (!b.problems.isEmpty())
+		{
+			throw new IllegalStateException("checked when the pipeline was built: " + b.problems);
+		}
+		b.construct();
+		b.connect();
+		Pipeline copy = new Pipeline(b.built, b.maps);
+		for (Design.Node n : b.nodes.values())
+		{
+			if (n.kind().equals(ENTRY))
+			{
+				PerKeyCopies.Handler<?, ?> handler = (PerKeyCopies.Handler<?, ?>) b.built.get(n.id());
+				handler.copy = copy;
+				return handler;
+			}
+		}
+		throw new IllegalStateException("checked when the pipeline was built: a nested Design has an entry");
 	}
 
 	// --- checks: every problem is collected, nothing is built while any remains ---
@@ -72,7 +108,15 @@ final class PipelineBuilder
 				problems.add("node '" + n.id() + "' has unknown kind '" + n.kind() + "' (known: " + Kinds.names() + ")");
 				continue;
 			}
+			if (kind.perKeyOnly() && !nested)
+			{
+				problems.add("node '" + n.id() + "': kind '" + n.kind() + "' is allowed only inside a map's nested Design");
+			}
 			checkSettings(n, kind);
+		}
+		if (nested && design.nodes().stream().filter(n -> n.kind().equals(ENTRY)).count() != 1)
+		{
+			problems.add("a map's nested Design needs exactly one node of kind '" + ENTRY + "'");
 		}
 		Map<Design.Port, Integer> wiresAt = new HashMap<>();
 		for (Design.Wire w : design.wires())
@@ -155,6 +199,21 @@ final class PipelineBuilder
 			}
 		});
 		kind.catalogueSettings().forEach((key, type) -> catalogueEntry(n, key, type));
+		if (nested && n.settings().get(CAPACITY) instanceof Integer c && c < 1)
+		{
+			// The buffer refuses this itself (J6), but a nested Design is built only when a key arrives:
+			// checked here, it is refused when the pipeline is built.
+			problems.add("node '" + n.id() + "': buffer capacity must be at least 1, was " + c);
+		}
+		if (n.kind().equals(MAP) && n.settings().get(PER_KEY) instanceof Design perKey)
+		{
+			PipelineBuilder inner = new PipelineBuilder(perKey, catalogue, true, null);
+			inner.check();
+			for (String p : inner.problems)
+			{
+				problems.add("in map '" + n.id() + "': " + p);
+			}
+		}
 	}
 
 	private void catalogueEntry(Design.Node n, String key, Class<?> type)
@@ -285,12 +344,41 @@ final class PipelineBuilder
 				case KEYBOARD -> BasicBlocks.getKeyboardBlock();
 				case CONSOLE -> BasicBlocks.getConsoleBlock();
 				case HOST_SINK, HOST_SOURCE -> catalogue.get((String) s.get(OBJECT));
+				case MAP ->
+				{
+					PerKeyCopies<?, ?> copies = new PerKeyCopies<>(
+							(Function) catalogue.get((String) s.get(FUNCTION)), (Design) s.get(PER_KEY), catalogue);
+					maps.add(copies);
+					yield BasicBlocks.getMapBlock(copies);
+				}
+				case ENTRY -> new PerKeyCopies.Handler<>(key);
+				case HOST_SINK_PER_KEY -> perKeyObject(n);
 				default -> throw new IllegalStateException("kind '" + n.kind() + "' is in the table but not built");
 			};
 		} catch (IllegalArgumentException e)
 		{
 			throw new IllegalArgumentException("node '" + n.id() + "': " + e.getMessage(), e);
 		}
+	}
+
+	/** A hostSinkPerKey node's object: its function, applied to this copy's key. */
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	private Object perKeyObject(Design.Node n)
+	{
+		Object made;
+		try
+		{
+			made = ((Function) catalogue.get((String) n.settings().get(OBJECT))).apply(key);
+		} catch (RuntimeException e)
+		{
+			throw new IllegalStateException("node '" + n.id() + "': its function failed for key '" + key + "'", e);
+		}
+		if (!(made instanceof Output))
+		{
+			throw new IllegalStateException("node '" + n.id() + "': its function gave " + made
+					+ " for key '" + key + "', not an Output");
+		}
+		return made;
 	}
 
 	private Object value(Map<String, Object> s)
@@ -333,6 +421,7 @@ final class PipelineBuilder
 						case THREAD -> ((ThreadBlock) from).setOutput(target(w.to()));
 						case PUSH -> ((PushBlock) from).setOutput(target(w.to()));
 						case DISTRIBUTOR -> ((DistributorBlock) from).addOutput(target(w.to()));
+						case ENTRY -> ((PerKeyCopies.Handler) from).setTarget(target(w.to()));
 						default -> pullInto(w, from, to); // a block that is an Input
 					}
 				}

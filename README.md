@@ -22,8 +22,9 @@ runtime, everything built through static factories such as
 characterization tests that describe its concurrency behaviour. Since
 then, on `main`, every known defect has been fixed one at a time, and
 a declarative way to assemble pipelines has arrived: a pipeline written
-as plain data by a typed Java builder (`design` package, 73 tests).
-Still to come: the map block's per-key designs and the UDP socket.
+as plain data by a typed Java builder, including maps that run one
+small pipeline per key (`design` package, 94 tests in all). Still to
+come: the UDP socket, and the demo programs rebuilt through it.
 (2026-11-10)
 
 ## Quick start

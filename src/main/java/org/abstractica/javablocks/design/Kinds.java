@@ -42,7 +42,8 @@ final class Kinds
 	                boolean reporting,
 	                Map<String, Class<?>> catalogueSettings,
 	                Map<String, Class<?>> plainSettings,
-	                boolean holdsValue)
+	                boolean holdsValue,
+	                boolean perKeyOnly)
 	{
 	}
 
@@ -60,6 +61,11 @@ final class Kinds
 	static final String HOST_SINK = "hostSink";
 	static final String HOST_SOURCE = "hostSource";
 	static final String PING_PONG = "pingPong";
+	static final String MAP = "map";
+	/** Only inside a map's nested Design: this key's messages enter here. */
+	static final String ENTRY = "entry";
+	/** Only inside a map's nested Design: a host Output made from the key. */
+	static final String HOST_SINK_PER_KEY = "hostSinkPerKey";
 
 	/** Settings keys. */
 	static final String VALUE = "value";
@@ -69,6 +75,8 @@ final class Kinds
 	static final String PROTOCOL = "protocol";
 	static final String OBJECT = "object";
 	static final String CAPACITY = "capacity";
+	/** A map's nested Design: the one setting that is not a string, number or boolean. */
+	static final String PER_KEY = "perKey";
 
 	/** The reporter ports every reporting kind has; never required. */
 	static final Set<String> REPORTER_PORTS = Set.of("info", "debug", "error");
@@ -94,13 +102,20 @@ final class Kinds
 	                         Map<String, Class<?>> catalogueSettings, Map<String, Class<?>> plainSettings,
 	                         boolean holdsValue)
 	{
+		kind(name, reporting, ports, catalogueSettings, plainSettings, holdsValue, false);
+	}
+
+	private static void kind(String name, boolean reporting, Map<String, PortSpec> ports,
+	                         Map<String, Class<?>> catalogueSettings, Map<String, Class<?>> plainSettings,
+	                         boolean holdsValue, boolean perKeyOnly)
+	{
 		Map<String, PortSpec> all = new LinkedHashMap<>(ports);
 		if (reporting)
 		{
 			for (String r : REPORTER_PORTS) all.put(r, pushOut(false));
 		}
 		KINDS.put(name, new KindSpec(name, Map.copyOf(all), reporting,
-				Map.copyOf(catalogueSettings), Map.copyOf(plainSettings), holdsValue));
+				Map.copyOf(catalogueSettings), Map.copyOf(plainSettings), holdsValue, perKeyOnly));
 	}
 
 	static
@@ -122,6 +137,9 @@ final class Kinds
 		kind(HOST_SOURCE, false, Map.of("out", PULL_OUT), Map.of(OBJECT, Input.class), Map.of(), false);
 		kind(PING_PONG, true, Map.of("in", PUSH_IN, "timer", PUSH_IN, "send", pushOut(true)),
 				Map.of(PROTOCOL, PingPongProtocol.class), Map.of(), false);
+		kind(MAP, true, Map.of("in", PUSH_IN), Map.of(FUNCTION, Function.class), Map.of(PER_KEY, Design.class), false);
+		kind(ENTRY, false, Map.of("out", pushOut(true)), Map.of(), Map.of(), false, true);
+		kind(HOST_SINK_PER_KEY, false, Map.of("in", PUSH_IN), Map.of(OBJECT, Function.class), Map.of(), false, true);
 	}
 
 	/** The kind's spec, or null when no such kind exists. */

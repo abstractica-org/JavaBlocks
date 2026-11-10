@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -40,12 +41,26 @@ import static org.abstractica.javablocks.design.Kinds.*;
  * <p>The compiler accepts only push-to-push and pull-to-pull wires; what it cannot see (a slot left
  * unwired, a single slot wired twice) is refused when the Design is built.
  */
-public final class Designer
+public sealed class Designer permits PerKeyDesigner
 {
 	private final List<Design.Node> nodes = new ArrayList<>();
 	private final List<Design.Wire> wires = new ArrayList<>();
 	private final Set<String> ids = new HashSet<>();
-	private final Catalogue catalogue = new Catalogue();
+	private final Catalogue catalogue;
+	/** Prefixed to every automatic catalogue name: empty here, {@code <map>.} in a map's nested Designer. */
+	private final String prefix;
+
+	public Designer()
+	{
+		this(new Catalogue(), "");
+	}
+
+	/** A Designer writing into {@code catalogue}, its automatic names starting with {@code prefix}. */
+	Designer(Catalogue catalogue, String prefix)
+	{
+		this.catalogue = catalogue;
+		this.prefix = prefix;
+	}
 
 	/** The Design written so far, as plain data. */
 	public Design design()
@@ -83,7 +98,7 @@ public final class Designer
 
 	public <F, T> PushNode<F, T> push(String id, Function<F, T> function)
 	{
-		return push(id, id + "." + FUNCTION, function);
+		return push(id, auto(id, FUNCTION), function);
 	}
 
 	/** A push block whose function is stored in the catalogue under {@code name}. */
@@ -95,7 +110,7 @@ public final class Designer
 
 	public <F, T> PullNode<F, T> pull(String id, Function<F, T> function)
 	{
-		return pull(id, id + "." + FUNCTION, function);
+		return pull(id, auto(id, FUNCTION), function);
 	}
 
 	/** A pull block whose function is stored in the catalogue under {@code name}. */
@@ -107,7 +122,7 @@ public final class Designer
 
 	public <E> IfBlockNode<E> ifBlock(String id, Predicate<E> predicate)
 	{
-		return ifBlock(id, id + "." + PREDICATE, predicate);
+		return ifBlock(id, auto(id, PREDICATE), predicate);
 	}
 
 	/** An if block whose predicate is stored in the catalogue under {@code name}. */
@@ -164,20 +179,20 @@ public final class Designer
 	/** A host's own Output object, stored in the catalogue as {@code <id>.object}. */
 	public <E> HostSinkNode<E> hostSink(String id, Output<E> sink)
 	{
-		node(id, HOST_SINK, named(id, OBJECT, id + "." + OBJECT, sink));
+		node(id, HOST_SINK, named(id, OBJECT, auto(id, OBJECT), sink));
 		return new HostSinkNode<>(id);
 	}
 
 	/** A host's own Input object, stored in the catalogue as {@code <id>.object}. */
 	public <E> HostSourceNode<E> hostSource(String id, Input<E> source)
 	{
-		node(id, HOST_SOURCE, named(id, OBJECT, id + "." + OBJECT, source));
+		node(id, HOST_SOURCE, named(id, OBJECT, auto(id, OBJECT), source));
 		return new HostSourceNode<>(id);
 	}
 
 	public <E> PingPongNode<E> pingPong(String id, PingPongProtocol<?, E, ?> protocol)
 	{
-		return pingPong(id, id + "." + PROTOCOL, protocol);
+		return pingPong(id, auto(id, PROTOCOL), protocol);
 	}
 
 	/** A ping-pong block whose protocol is stored in the catalogue under {@code name}. */
@@ -187,9 +202,63 @@ public final class Designer
 		return new PingPongNode<>(id);
 	}
 
+	/**
+	 * A map: sorts the items pushed in by {@code key} and, on the first item with an unseen key, builds a
+	 * fresh copy of the nested Design {@code perKey} writes, for that key. The copy's threads start with
+	 * the pipeline and stop with it, or when its handler is removed from the map.
+	 *
+	 * <pre>{@code
+	 * var peers = d.map("peers", (String msg) -> msg.split(":")[0], perKey -> {
+	 *     var show = perKey.hostSinkPerKey("show", key -> new SimpleHandler(key));
+	 *     perKey.wire(perKey.entry(), show.in());
+	 * });
+	 * }</pre>
+	 *
+	 * Node ids inside the nested Design are its own; its automatic catalogue names start with
+	 * {@code <id>.}, e.g. {@code peers.show.object}.
+	 *
+	 * <p>Removing a handler ({@code MapBlock.removeHandler}) stops its copy's threads, each as
+	 * {@code ThreadBlock.stop()} does, so three things hang, as they would wired by hand: a removal from
+	 * one of the copy's own threads (a thread cannot stop itself); a thread blocked putting into the
+	 * removed copy's full buffer, which nothing drains any more (and with it a later pipeline stop, if
+	 * that thread is the pipeline's); and, after the pipeline stops, a host thread blocked putting into a
+	 * copy's full buffer. Remove a handler, or stop, when nothing is putting into its copy.
+	 */
+	public <K, E> MapNode<K, E> map(String id, Function<E, K> key, Consumer<PerKeyDesigner<K, E>> perKey)
+	{
+		return map(id, auto(id, FUNCTION), key, perKey);
+	}
+
+	/** A map whose key function is stored in the catalogue under {@code name}. */
+	public <K, E> MapNode<K, E> map(String id, String name, Function<E, K> key, Consumer<PerKeyDesigner<K, E>> perKey)
+	{
+		requireFree(id);
+		// The nested Designer writes into a copy; nothing reaches this catalogue unless all of it fits.
+		PerKeyDesigner<K, E> nested = new PerKeyDesigner<>(new Catalogue(catalogue), prefix + id + ".");
+		perKey.accept(nested);
+		Catalogue merged = new Catalogue(((Designer) nested).catalogue).put(name, key);
+		requireFree(id); // again: the lambda may have used this Designer too
+		for (String n : merged.names())
+		{
+			if (catalogue.contains(n) && catalogue.get(n) != merged.get(n))
+			{
+				throw new IllegalArgumentException("catalogue name '" + n + "' already stands for another object");
+			}
+		}
+		for (String n : merged.names()) catalogue.put(n, merged.get(n));
+		node(id, MAP, Map.of(FUNCTION, name, PER_KEY, nested.design()));
+		return new MapNode<>(id);
+	}
+
 	// --- recording ---
 
-	private void node(String id, String kind, Map<String, Object> settings)
+	/** The automatic catalogue name for {@code key} of node {@code id}. */
+	final String auto(String id, String key)
+	{
+		return prefix + id + "." + key;
+	}
+
+	final void node(String id, String kind, Map<String, Object> settings)
 	{
 		requireFree(id);
 		ids.add(id);
@@ -206,7 +275,7 @@ public final class Designer
 	}
 
 	/** Puts {@code object} in the catalogue under {@code name}; refused before anything changes. */
-	private Map<String, Object> named(String id, String key, String name, Object object)
+	final Map<String, Object> named(String id, String key, String name, Object object)
 	{
 		requireFree(id);
 		catalogue.put(name, object);
@@ -219,6 +288,6 @@ public final class Designer
 		{
 			return Map.of(VALUE, value);
 		}
-		return named(id, VALUE_NAME, id + "." + VALUE, value);
+		return named(id, VALUE_NAME, auto(id, VALUE), value);
 	}
 }
