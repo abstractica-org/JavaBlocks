@@ -1,6 +1,6 @@
 ---
 type: project-node
-summary: "The settled thread model: only ThreadBlock owns a thread, blocking lives in get/put, stop() waits for the in-flight put then exits for every input kind (J4), and where map, distributor and ping-pong lock (J5–J11) — all pinned by tests, and how to pin a blocked thread without a race."
+summary: "Thread model: only ThreadBlock owns a thread, blocking lives in get/put, stop() waits for the in-flight put then exits (J4), where map, distributor and ping-pong lock (J5–J11); all pinned, and how to pin a blocked thread without a race."
 verified: 2026-11-10
 related:
   - path: ..
