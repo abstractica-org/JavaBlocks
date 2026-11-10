@@ -528,4 +528,37 @@ class MapNodeTest
 		assertTrue(message.contains("node 'b' needs setting 'perKey' as Design"), message);
 		assertTrue(message.contains("in map 'c': a map's nested Design needs exactly one node of kind 'entry'"), message);
 	}
+
+	@Test
+	void aNestedBufferOfCapacityZeroIsRefusedWhenThePipelineIsBuilt()
+	{
+		Designer d = new Designer();
+		d.map("peers", (String m) -> keyOf(m), perKey ->
+		{
+			var buffer = perKey.<String>buffer("buffer", 0);
+			var worker = perKey.<String>thread("worker");
+			var show = perKey.hostSinkPerKey("show", this::sinkFor);
+			perKey.wire(perKey.entry(), buffer.in());
+			perKey.wire(buffer.out(), worker.in());
+			perKey.wire(worker.out(), show.in());
+		});
+
+		String message = refusal(d.design(), d.catalogue());
+
+		assertTrue(message.contains("in map 'peers': node 'buffer': buffer capacity must be at least 1, was 0"), message);
+	}
+
+	@Test
+	void aMapWhoseLambdaTakesItsIdIsRefusedAndMergesNothing()
+	{
+		Designer d = new Designer();
+		assertThrows(IllegalArgumentException.class, () -> d.map("peers", (String m) -> keyOf(m), perKey ->
+		{
+			d.trashcan("peers");
+			var show = perKey.hostSinkPerKey("show", this::sinkFor);
+			perKey.wire(perKey.entry(), show.in());
+		}));
+		assertFalse(d.catalogue().contains("peers.show.object"));
+		assertFalse(d.catalogue().contains("peers.function"));
+	}
 }

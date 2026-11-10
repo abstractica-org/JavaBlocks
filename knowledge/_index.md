@@ -57,7 +57,7 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
   runnable check), `examples/`, `reporter/`, and `design/` — the
   declarative assembly (J13).
-- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (48: 29 for the core, 19 for the map node); see `design/` in the tree.
+- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (50: 29 for the core, 21 for the map node); see `design/` in the tree.
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.

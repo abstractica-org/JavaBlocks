@@ -84,4 +84,4 @@ The rest of the builder can still be built once the names and catalogue records 
 
 ## Done
 
-2026-11-10, autopilot run 6: the map node is built as ruled (J14). `d.map(id, keyFn, perKey -> { ... })` with `perKey.entry()` and `perKey.hostSinkPerKey(...)`; the nested Design is checked with the outer one, copied and started once per key, and stopped with the pipeline or on `removeHandler`. 19 tests, each proven able to fail. Closing a removed copy's sockets comes with the socket node, which waits on `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md`.
+2026-11-10, autopilot run 6: the map node is built as ruled (J14). `d.map(id, keyFn, perKey -> { ... })` with `perKey.entry()` and `perKey.hostSinkPerKey(...)`; the nested Design is checked with the outer one, copied and started once per key, and stopped with the pipeline or on `removeHandler`. 21 tests, each proven able to fail. Closing a removed copy's sockets comes with the socket node, which waits on `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md`.

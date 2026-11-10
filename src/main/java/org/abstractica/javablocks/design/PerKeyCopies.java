@@ -101,12 +101,9 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 		for (Handler<K, E> h : copies)
 		{
 			h.copy.stop();
-			if (h.removed)
+			synchronized (this)
 			{
-				synchronized (this)
-				{
-					live.remove(h);
-				}
+				if (h.removed) live.remove(h);
 			}
 		}
 	}

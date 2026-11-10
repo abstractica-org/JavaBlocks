@@ -45,9 +45,10 @@ the executable form of this node.
   checked with the outer one; on each new key the map builds a fresh
   copy, started if the pipeline runs. `Pipeline.stop()` stops its own
   threads first, then the copies; `removeHandler` stops one copy.
-  Removing or stopping while something still puts into a copy's full
-  buffer hangs, as wired by hand (pinned): remove when the copy is
-  quiet. A copy cannot remove itself from its own thread.
+  A thread putting into a copy's full buffer stays blocked once that
+  copy is removed (pinned) or the pipeline stopped, as wired by hand:
+  remove when the copy is quiet. A copy cannot remove itself from its
+  own thread (a thread cannot stop itself).
 - **Not built:** `udpSocket`, which waits on
   `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md` (a
   thread reading a UDP socket never stops).

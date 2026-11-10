@@ -572,13 +572,20 @@ stay as they are.
   the outer catalogue, merged back only once the whole map is accepted
   (a refused map leaves the catalogue as it was), and prefixes its
   automatic names with the map's id (`peers.show.object`); a name given
-  explicitly is used as given. An outer id that itself contains a dot
+  explicitly is used as given. A map whose lambda takes the map's own id,
+  or a catalogue name, from the outer Designer is refused before anything
+  merges. An outer id that itself contains a dot
   (`peers.show`) can collide with such a name; the collision is refused
   at once, when the map is written.
 - **Checking.** A nested Design is checked in full when the outer one is
   built — every problem listed together, prefixed `in map 'peers':` —
   so a broken handler design is refused before anything runs, not when
-  the first message arrives. Maps may nest.
+  the first message arrives. For that, a buffer's capacity below 1
+  inside a nested Design is refused by the check, as the buffer itself
+  refuses it (J6); outside a map the buffer's own refusal at build time
+  stays as it was. The other kinds have no setting their factory
+  refuses. Maps may nest. The pipeline keeps its own copy of the
+  catalogue, since a map reads it on every new key.
 - **A copy per key.** On the first message with an unseen key, the map
   (under its lock, on the putting thread, as `MapBlock` does today)
   builds a fresh copy of the nested Design with that key, and starts its
@@ -601,6 +608,9 @@ stay as they are.
 - **Errors at copy time.** A `hostSinkPerKey` function that throws, or
   returns something that is not an `Output`, fails the `put` that
   carried the new key, naming the node; the map keeps no handler for it.
+  When that put comes from one of the pipeline's thread blocks, the
+  thread dies of the exception, as it does today for any runtime
+  exception thrown downstream of it.
 - **Known limits, from the thread model, not fixed here.** Removing a
   handler stops its copy's threads as `ThreadBlock.stop()` does, so, as
   with blocks wired by hand: a removal from one of the copy's own
@@ -624,7 +634,7 @@ and `removeHandler` give a host each copy's key and its removal, but not
 the copy's blocks: nothing inside a copy is reachable through
 `Pipeline.block`.
 
-**Tests** (19, each proven able to fail by a one-line mutation): the
+**Tests** (21, each proven able to fail by a one-line mutation): the
 Designer writes the nested data, ids inside are their own, a given name
 is used as given, a refused map leaves the catalogue as it was, a dotted
 id's collision is refused; per-key copies are made once per key, run on
@@ -633,5 +643,6 @@ feeding them) and on `removeHandler`, a removal by an interrupted
 thread is finished by the pipeline's stop, a copy made while stopped
 starts with the pipeline and copies that ran start again; maps nest; a
 per-key function returning no Output or throwing fails the put; the
-pinned limit above; the build-time refusals for nested Designs.
+pinned limit above; the build-time refusals for nested Designs,
+including a capacity-0 buffer inside a map.
 Existing tests unchanged.

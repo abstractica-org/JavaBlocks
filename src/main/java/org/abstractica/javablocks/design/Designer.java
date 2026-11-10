@@ -237,6 +237,14 @@ public class Designer
 		PerKeyDesigner<K, E> nested = new PerKeyDesigner<>(new Catalogue(catalogue), prefix + id + ".");
 		perKey.accept(nested);
 		Catalogue merged = new Catalogue(((Designer) nested).catalogue).put(name, key);
+		requireFree(id); // again: the lambda may have used this Designer too
+		for (String n : merged.names())
+		{
+			if (catalogue.contains(n) && catalogue.get(n) != merged.get(n))
+			{
+				throw new IllegalArgumentException("catalogue name '" + n + "' already stands for another object");
+			}
+		}
 		for (String n : merged.names()) catalogue.put(n, merged.get(n));
 		node(id, MAP, Map.of(FUNCTION, name, PER_KEY, nested.design()));
 		return new MapNode<>(id);

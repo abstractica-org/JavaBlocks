@@ -52,7 +52,8 @@ final class PipelineBuilder
 
 	static Pipeline build(Design design, Catalogue catalogue)
 	{
-		PipelineBuilder b = new PipelineBuilder(design, catalogue, false, null);
+		// A copy: the maps read it on later keys, from whichever thread brings them.
+		PipelineBuilder b = new PipelineBuilder(design, new Catalogue(catalogue), false, null);
 		b.check();
 		if (!b.problems.isEmpty())
 		{
@@ -198,6 +199,12 @@ final class PipelineBuilder
 			}
 		});
 		kind.catalogueSettings().forEach((key, type) -> catalogueEntry(n, key, type));
+		if (nested && n.settings().get(CAPACITY) instanceof Integer c && c < 1)
+		{
+			// The buffer refuses this itself (J6), but a nested Design is built only when a key arrives:
+			// checked here, it is refused when the pipeline is built.
+			problems.add("node '" + n.id() + "': buffer capacity must be at least 1, was " + c);
+		}
 		if (n.kind().equals(MAP) && n.settings().get(PER_KEY) instanceof Design perKey)
 		{
 			PipelineBuilder inner = new PipelineBuilder(perKey, catalogue, true, null);
