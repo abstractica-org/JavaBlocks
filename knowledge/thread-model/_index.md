@@ -1,7 +1,7 @@
 ---
 type: project-node
 summary: "The settled thread model: only ThreadBlock owns a thread, blocking lives in get/put, stop() waits for the in-flight put then exits for every input kind (J4), and where map, distributor and ping-pong lock (J5–J11) — all pinned by tests."
-verified: 2026-11-09
+verified: 2026-11-10
 related:
   - path: ..
     rationale: The orientation names this node as the thread-domain model, crystallized after J3.
@@ -44,8 +44,13 @@ completed `put`, and resets `running` whenever it ends. Pinned in
   item is delivered, not dropped (unchanged from v0.2.0).
 - A worker parked in an *interruptible* `get()` (a buffer) exits at
   once. One inside a `get()` that survives the interrupt
-  (`ConstantBlock`, the UDP socket) finishes that get, delivers that
-  one item, and exits — stop is prompt, not instant. A delay function
+  (`ConstantBlock`) finishes that get, delivers that one item, and
+  exits — stop is prompt, not instant. The UDP socket's `get()` is
+  worse: an interrupt never wakes `DatagramSocket.receive`, only a
+  packet or closing the socket does, so while no packet arrives
+  `stop()` waits forever (pinned in
+  `BufferedSocketBlockCharacterizationTest`, found 2026-11-10; the fix
+  is `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md`). A delay function
   on the input side returns early on the interrupt and keeps the flag
   (J9), so the worker delivers the item in hand at once and exits. The
   timer idiom (`FirstTest`, delay on the output side) is stoppable;

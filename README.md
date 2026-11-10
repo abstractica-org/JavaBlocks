@@ -20,12 +20,11 @@ runtime, everything built through static factories such as
 
 **Active** — version 0.2.1 is the 0.2.0 code pinned by
 characterization tests that describe its concurrency behaviour. Since
-then, on `main`, every known defect has been fixed one at a time: thread
-blocks always stop, and the buffer, distributor, map, delay, reporter
-and ping-pong cleanups are in (43 tests). Next comes a declarative way
-to assemble pipelines: its form is chosen (a pipeline described as
-plain data, written by a typed Java builder), and its names are being
-decided. (2026-11-09)
+then, on `main`, every known defect has been fixed one at a time, and
+a declarative way to assemble pipelines has arrived: a pipeline written
+as plain data by a typed Java builder (`design` package, 73 tests).
+Still to come: the map block's per-key designs and the UDP socket.
+(2026-11-10)
 
 ## Quick start
 

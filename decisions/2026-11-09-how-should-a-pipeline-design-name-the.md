@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-how-should-a-pipeline-design-name-the
 title: How should a pipeline Design name the Java functions and host objects it uses?
-status: ruled
+status: done
 stakes: medium
 confidence: 82
 opened: 2026-11-09
@@ -83,3 +83,7 @@ Nothing that needs a function (push, pull, if, ping-pong) can be put into a Desi
 ## Ruling
 
 **Names in the Design, objects in a catalogue; the builder fills both** (`names-in-the-design-objects-in-a-catalogue-the-builder-fills-both`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-10, autopilot run 5: logged as J13 and built: `Catalogue`, `Designer.catalogue()`, auto-names `<node>.function` / `.predicate` / `.protocol` / `.object` / `.value`, the named forms `push`/`pull`/`ifBlock`/`pingPong(id, name, …)`; a Design whose names the catalogue lacks is refused at build time naming every missing entry.

@@ -1,7 +1,7 @@
 ---
 type: project-node
 summary: "Open at the start of any JavaBlocks work — a plain-Java dataflow library where blocks wire by handing references, only `ThreadBlock` owns a thread and only `BufferBlock` holds back-pressure; the tree holds this orientation and the thread-model node."
-verified: 2026-11-09
+verified: 2026-11-10
 ---
 
 # JavaBlocks
@@ -27,8 +27,11 @@ viewer adapter, which waits for `wiring-playground`'s graph contract.
 The base is clean before any public API is built on it. Goal 1 is
 done: every known wart was fixed under its own ruling (J4–J11, merged
 2026-11-09). Goal 2's form is ruled — a Design as plain data with a
-typed Java builder on top (J12); its names, how Java functions are
-named in a Design, and the map block's per-key slot are open records.
+typed Java builder on top (J12) — and its names, catalogue and map slot
+are ruled (J13). The core is built in `design/` (`Design`, `Catalogue`,
+`Designer`, `Pipeline`, push/pull ports, every kind but `map` and
+`udpSocket`); the socket node waits on a newly found wart (a thread
+reading a UDP socket never stops).
 
 ## The model in one paragraph
 
@@ -52,8 +55,9 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   factory), `blocks/basic/impl/` (their implementations),
   `assemblies/`, `blocks/udp/`, `blocks/connection/` (the ping-pong
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
-  runnable check), `examples/`, `reporter/`.
-- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11).
+  runnable check), `examples/`, `reporter/`, and `design/` — the
+  declarative assembly (J13).
+- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (28).
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.

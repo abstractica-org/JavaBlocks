@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-what-should-the-pipeline-builder-s-public-names
 title: "What should the pipeline builder's public names be?"
-status: ruled
+status: done
 stakes: high
 confidence: 82
 opened: 2026-11-09
@@ -103,3 +103,7 @@ Nothing of the assembly is built, because every class in it has a public name. R
 ## Ruling
 
 **Design, Designer, Pipeline, with push and pull ports** (`design-designer-pipeline-with-push-and-pull-ports`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-10, autopilot run 5: logged as J13 and built in `org.abstractica.javablocks.design` with exactly the ruled names (Design, Designer, Pipeline, the four port types, `<Kind>Node` handles, the kind names, reporter ports); every kind but `map` (its own ruled step) and `udpSocket` (waits on `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md`).
