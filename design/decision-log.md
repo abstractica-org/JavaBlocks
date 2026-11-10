@@ -663,16 +663,23 @@ needs no socket, so it goes first.
   the ping-pong block's timer — but as a Design: nodes `keyboard`,
   `driver`, `ping`, `sender`, `timeout`, `timer`, `tick`. The wiring is a
   package-private `FirstTest.design(Designer, PullOut<String> commands,
-  Output<String> sender)`, so a test can stand a host source in for the
-  keyboard (a program-wide singleton) and a sink in for the sender.
-  `main` passes the keyboard and a `SimpleSender`, then builds and
+  Output<String> sender, long timeoutMillis, long tickMillis)`, so a test
+  can stand a host source in for the keyboard (a program-wide
+  singleton) and a sink in for the sender, and tick fast. `main` passes
+  the keyboard, a `SimpleSender`, 5000 and 10000, then builds and
   starts.
 - **What does not change.** No library code, no public API, no existing
   test. The timings and every block are the ones FirstTest used; the
   ping-pong block still sends through `SimpleSender`, now as a host sink
   wired to its `send` port instead of a constructor argument (the
   builder hands it to the constructor the same way).
-- **Tests.** `FirstTestTest` builds `FirstTest.design` with a host
+- **Stopping it is slow, as the thread model says.** `stop()` waits for
+  a thread's in-flight put (J4), and the timer thread spends nearly all
+  its time inside the delayed put, so stopping FirstTest's own pipeline
+  takes up to its 10 s tick. `main` never stops it; the tests use a
+  short tick.
+- **Tests.** `FirstTestTest` (3) builds `FirstTest.design` with a host
   source and a sink: a ping from a peer is answered with a pong through
-  the sender, and the pipeline stops. Proven able to fail by one-line
-  mutations of `FirstTest.design`.
+  the sender; with a short timeout and tick, the timer pings a quiet
+  peer; the pipeline stops. Proven able to fail by one-line mutations of
+  `FirstTest.design`.

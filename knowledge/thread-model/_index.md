@@ -94,9 +94,5 @@ the change and its tests are J4 in `design/decision-log.md`.
 
 ## Pinning a blocked thread
 
-A test that claims a thread stays blocked forces each step — wait until
-the thread is parked in `put` (its state, a latch), then act — rather
-than sleeping and hoping. J14's `aThreadPuttingIntoARemovedFullCopyStaysBlocked`
-failed about half its runs until rewritten this way. Each pin is then
-proven by breaking the code under test one line at a time and watching
-a test go red.
+Force each step (wait until the thread is parked in `put`, then act),
+never sleep and hope: a J14 pin written with sleeps failed half its runs.
