@@ -1,7 +1,7 @@
 ---
 id: 2026-11-09-how-should-the-map-block-s-per-key-handler
 title: "How should the map block's per-key handler slot be filled in a pipeline Design?"
-status: ruled
+status: done
 stakes: medium
 confidence: 80
 opened: 2026-11-09
@@ -81,3 +81,7 @@ The rest of the builder can still be built once the names and catalogue records 
 ## Ruling
 
 **A nested Design, copied once per key** (`a-nested-design-copied-once-per-key`). Tog, 2026-11-09, from the project pages.
+
+## Done
+
+2026-11-10, autopilot run 5: the ruling is recorded in J13; as the record proposed, the map node (`perKey`, `entry()`, `hostSinkPerKey`) is built last within goal 2, after FirstTest is rebuilt through the Design. Nothing of it is built yet.
