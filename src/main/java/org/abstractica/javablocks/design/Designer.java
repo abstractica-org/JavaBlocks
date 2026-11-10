@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -22,7 +23,7 @@ import static org.abstractica.javablocks.design.Kinds.*;
  * <pre>{@code
  * Designer d = new Designer();
  * var source = d.hostSource("source", myInput);
- * var driver = d.thread("driver");
+ * var driver = d.<String>thread("driver");
  * var shout  = d.push("shout", (String s) -> s + "!");
  * var sink   = d.hostSink("sink", myOutput);
  * d.wire(source.out(), driver.in());   // a pull wire
@@ -31,7 +32,12 @@ import static org.abstractica.javablocks.design.Kinds.*;
  * Pipeline p = d.design().build(d.catalogue());
  * }</pre>
  *
- * The compiler accepts only push-to-push and pull-to-pull wires; what it cannot see (a slot left
+ * A node whose methods take no typed argument ({@code thread}, {@code buffer}, {@code distributor},
+ * {@code trashcan}) needs its item type written out, e.g. {@code d.<String>thread("driver")}: Java
+ * cannot infer it from the wires made later, and a {@code ThreadNode<Object>} cannot push into a
+ * {@code PushIn<String>}.
+ *
+ * <p>The compiler accepts only push-to-push and pull-to-pull wires; what it cannot see (a slot left
  * unwired, a single slot wired twice) is refused when the Design is built.
  */
 public final class Designer
@@ -192,6 +198,7 @@ public final class Designer
 
 	private void requireFree(String id)
 	{
+		Objects.requireNonNull(id, "id");
 		if (ids.contains(id))
 		{
 			throw new IllegalArgumentException("node id '" + id + "' is already used");

@@ -222,18 +222,47 @@ class PipelineTest
 		var network = d.hostSource("network", received);
 		var driver = d.<String>thread("driver");
 		var ping = d.pingPong("ping", new SimplePingPongProtokol());
-		var loud = d.push("loud", (String s) -> s.toLowerCase());
+		var lower = d.push("lower", (String s) -> s.toLowerCase());
 		var sender = d.hostSink("sender", sent);
 		d.wire(network.out(), driver.in());
 		d.wire(driver.out(), ping.in());
-		d.wire(ping.send(), loud.in());
-		d.wire(loud.out(), sender.in());
+		d.wire(ping.send(), lower.in());
+		d.wire(lower.out(), sender.in());
 		pipeline = d.design().build(d.catalogue());
 		pipeline.start();
 
 		received.put("peer:PING");
 		assertTrue(sent.receivedWithin(1, 2000));
 		assertEquals("peer:pong", sent.items().get(0));
+	}
+
+	/** The first ping-pong block sends into a second, declared after it: the second must be built first. */
+	@Test
+	void aPingPongBlockSendsIntoAnotherPingPongBlock() throws InterruptedException
+	{
+		BufferBlock<String> received = BasicBlocks.getBufferBlock(4);
+		Sink<String> sent = new Sink<>();
+		Designer d = new Designer();
+		var network = d.hostSource("network", received);
+		var driver = d.<String>thread("driver");
+		var first = d.pingPong("first", new SimplePingPongProtokol());
+		var second = d.pingPong("second", new SimplePingPongProtokol());
+		var timeout = d.constant("timeout", 100L);
+		var timer = d.<Long>thread("timer");
+		var tick = d.push("tick", BasicFunctions.<Long>DelayFunction(20));
+		var sender = d.hostSink("sender", sent);
+		d.wire(network.out(), driver.in());
+		d.wire(driver.out(), first.in());
+		d.wire(first.send(), second.in());
+		d.wire(second.send(), sender.in());
+		d.wire(timeout.out(), timer.in());
+		d.wire(timer.out(), tick.in());
+		d.wire(tick.out(), second.timer());
+		pipeline = d.design().build(d.catalogue());
+		pipeline.start();
+
+		received.put("peer:PING"); // first answers "peer:PONG" into second, which then keeps "peer" alive
+		assertTrue(Async.becomesTrueWithin(() -> sent.items().contains("peer:PING"), 2000), sent.items().toString());
 	}
 
 	@Test

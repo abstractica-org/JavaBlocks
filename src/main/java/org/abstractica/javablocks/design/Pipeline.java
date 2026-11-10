@@ -54,7 +54,11 @@ public final class Pipeline implements ThreadControl
 		for (ThreadBlock<?> t : threads) t.start();
 	}
 
-	/** Stops every thread block, in the Design's node order; each stop waits as {@link ThreadBlock#stop()} does. */
+	/**
+	 * Stops every thread block, in the Design's node order; each stop waits as {@link ThreadBlock#stop()}
+	 * does. One that never returns holds up the rest: a thread pulling from a UDP socket (wired in as a
+	 * host source) does not wake on its stop until the socket is closed.
+	 */
 	@Override
 	public void stop() throws InterruptedException
 	{

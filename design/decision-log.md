@@ -517,6 +517,29 @@ and nothing in the blocks changes here.
   stops each in node order (each stop as J4 pins it); `isRunning()` is
   true while any of them runs.
 
+**Public details the run chose, open to the owner** (none was in a
+ruling's sketch; each is small to change before a release, and the
+first two shape what the viewer adapter will read and write):
+
+- the settings keys above (`value`, `valueName`, `function`, `predicate`,
+  `protocol`, `object`, `capacity`); `capacity` must be an `Integer`, so a
+  Design parsed from JSON as `Long` is refused today;
+- `Catalogue`'s methods: `put(name, object)` (chainable; refuses a name
+  that already stands for another object), `contains`, `get` (refuses an
+  absent name), `names`, and a copy constructor;
+- the base class `NodeHandle<B>`, `Pipeline.block(String id)`, and
+  `port()` on the four port types.
+
+**Found in review: a type has to be written out.** The ruled sketch's
+`var driver = d.thread("driver"); d.wire(driver.out(), ping.in());` does
+not compile: Java infers `ThreadNode<Object>`, which cannot push into a
+`PushIn<String>`. Nodes whose methods take no typed argument (`thread`,
+`buffer`, `distributor`, `trashcan`) need `d.<String>thread("driver")`.
+Accepting the sketch as written would mean giving up the push/pull type
+safety the names ruling chose the four port types for, so the run kept
+the explicit type and put the alternatives to the owner in
+`decisions/2026-11-10-how-should-a-host-write-the-item.md`.
+
 **Tests:** a new `design` test package: the Designer writes the data the
 rulings describe; pipelines built from a Design behave as the same
 pipelines wired by hand (functions, buffers, if, distributor, variable,
