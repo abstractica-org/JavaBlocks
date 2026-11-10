@@ -191,3 +191,5 @@ planners, builders and reviewers keep the default.
 
 SessionEnd (other) — ended without hibernate. The scope was popped by the session-end hook; nothing here was handed over. The next wakeup runs the crystallizer over this log.
 
+
+<!-- crystallized: 2026-11-10 by d50818be-0fda-494c-b996-7f3746f145f0 -->
