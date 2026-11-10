@@ -29,9 +29,9 @@ done: every known wart was fixed under its own ruling (J4–J11, merged
 2026-11-09). Goal 2's form is ruled — a Design as plain data with a
 typed Java builder on top (J12) — and its names, catalogue and map slot
 are ruled (J13). The core is built in `design/` (`Design`, `Catalogue`,
-`Designer`, `Pipeline`, push/pull ports, every kind but `map` and
-`udpSocket`); the socket node waits on a newly found wart (a thread
-reading a UDP socket never stops).
+`Designer`, `Pipeline`, push/pull ports, every kind but `udpSocket`;
+the map node as a nested Design per key, J14); the socket node waits on
+a newly found wart (a thread reading a UDP socket never stops).
 
 ## The model in one paragraph
 
@@ -57,7 +57,7 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
   runnable check), `examples/`, `reporter/`, and `design/` — the
   declarative assembly (J13).
-- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (29); see `design/` in the tree.
+- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (48: 29 for the core, 19 for the map node); see `design/` in the tree.
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.
@@ -74,5 +74,6 @@ assessment beside it. Neither is duplicated here.
 - `thread-model/` — the settled thread-domain model and the
   `stop()` contract, crystallized from the J3 characterization tests
   and updated for the J4 fix.
-- `design/` — the declarative assembly as ruled (J12, J13) and built:
-  Design, Catalogue, Designer, Pipeline, the kind table and its checks.
+- `design/` — the declarative assembly as ruled (J12–J14) and built:
+  Design, Catalogue, Designer, Pipeline, the kind table and its checks,
+  the map node.

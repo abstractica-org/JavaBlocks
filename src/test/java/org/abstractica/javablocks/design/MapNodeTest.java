@@ -292,6 +292,179 @@ class MapNodeTest
 		map.put("good:1");
 		assertEquals(List.of("good:1"), sinks.get("good").items());
 	}
+	@Test
+	void copiesThatRanStartAgainWithThePipeline() throws InterruptedException
+	{
+		Designer d = new Designer();
+		var peers = threadedMap(d);
+		pipeline = d.design().build(d.catalogue());
+		pipeline.start();
+		MapBlock<String, String, ?> map = pipeline.block(peers);
+		map.put("a:1");
+		assertTrue(sinks.get("a").receivedWithin(1, 2000));
+		pipeline.stop();
+
+		map.put("a:2"); // waits in the stopped copy's buffer
+		Thread.sleep(200);
+		assertEquals(1, sinks.get("a").items().size());
+		pipeline.start();
+		assertTrue(sinks.get("a").receivedWithin(2, 2000));
+		assertEquals(1, made.get(), "the same copy, restarted");
+	}
+
+	@Test
+	void aRemovalInterruptedBeforeItsStopLeavesTheCopyToThePipelineStop() throws InterruptedException
+	{
+		// The copy's worker is mid-put in a slow sink when an interrupted thread removes its handler: that
+		// stop gives up waiting at once, so the copy must stay tracked for the pipeline's stop to wait for.
+		java.util.concurrent.CountDownLatch entered = new java.util.concurrent.CountDownLatch(1);
+		java.util.concurrent.atomic.AtomicReference<Thread> worker = new java.util.concurrent.atomic.AtomicReference<>();
+		Designer d = new Designer();
+		var peers = d.map("peers", (String m) -> keyOf(m), perKey ->
+		{
+			var buffer = perKey.<String>buffer("buffer", 4);
+			var thread = perKey.<String>thread("worker");
+			var show = perKey.hostSinkPerKey("show", key -> (Output<String>) item ->
+			{
+				worker.set(Thread.currentThread());
+				entered.countDown();
+				Thread.sleep(500);
+			});
+			perKey.wire(perKey.entry(), buffer.in());
+			perKey.wire(buffer.out(), thread.in());
+			perKey.wire(thread.out(), show.in());
+		});
+		pipeline = d.design().build(d.catalogue());
+		pipeline.start();
+		MapBlock<String, String, ?> map = pipeline.block(peers);
+		map.put("a:1");
+		assertTrue(entered.await(2, java.util.concurrent.TimeUnit.SECONDS));
+
+		Thread.currentThread().interrupt();
+		map.removeHandler("a");
+		assertTrue(Thread.interrupted(), "the interrupt is kept");
+		assertTrue(pipeline.isRunning(), "the copy is still tracked while its worker finishes its put");
+
+		worker.get().join(2000);
+		assertFalse(worker.get().isAlive());
+		pipeline.start();
+		assertFalse(pipeline.isRunning(), "a removed copy never starts again");
+		pipeline.stop();
+		pipeline.start();
+		assertFalse(pipeline.isRunning());
+	}
+
+	@Test
+	void aThreadPuttingIntoARemovedFullCopyStaysBlocked() throws InterruptedException
+	{
+		// Pinned as a known limit (J14): the removed copy's buffer is full and nothing drains it.
+		Sink<String> received = new Sink<>();
+		Designer d = new Designer();
+		var peers = d.map("peers", (String m) -> keyOf(m), perKey ->
+		{
+			var buffer = perKey.<String>buffer("buffer", 1);
+			var worker = perKey.<String>thread("worker");
+			var show = perKey.hostSinkPerKey("show", key -> (Output<String>) item ->
+			{
+				Thread.sleep(50);
+				received.put(item);
+			});
+			perKey.wire(perKey.entry(), buffer.in());
+			perKey.wire(buffer.out(), worker.in());
+			perKey.wire(worker.out(), show.in());
+		});
+		pipeline = d.design().build(d.catalogue());
+		pipeline.start();
+		MapBlock<String, String, ?> map = pipeline.block(peers);
+		Thread feeder = new Thread(() ->
+		{
+			try
+			{
+				for (int i = 0; i < 20; i++) map.put("a:" + i);
+			} catch (InterruptedException e)
+			{
+				// released by the test
+			}
+		});
+		feeder.start();
+		assertTrue(received.receivedWithin(1, 2000));
+
+		map.removeHandler("a");
+		feeder.join(2000); // undisturbed, the 20 items take about 1 s
+		assertTrue(feeder.isAlive(), "blocked putting into the removed copy");
+		feeder.interrupt();
+		feeder.join(2000);
+		assertFalse(feeder.isAlive());
+	}
+
+	@Test
+	void aPerKeyFunctionThatThrowsFailsThePutNamingItsNode()
+	{
+		Designer d = new Designer();
+		var peers = d.map("peers", (String m) -> keyOf(m), perKey ->
+		{
+			var show = perKey.hostSinkPerKey("show", (String key) -> { throw new RuntimeException("boom"); });
+			perKey.wire(perKey.entry(), show.in());
+		});
+		pipeline = d.design().build(d.catalogue());
+		MapBlock<String, String, ?> map = pipeline.block(peers);
+
+		var e = assertThrows(IllegalStateException.class, () -> map.put("a:1"));
+		assertTrue(e.getMessage().contains("node 'show'"), e.getMessage());
+		assertEquals("boom", e.getCause().getMessage());
+		assertEquals(0, map.getSize());
+	}
+
+	@Test
+	void idsInsideAreTheirOwnAndAGivenNameIsUsedAsGiven() throws InterruptedException
+	{
+		Sink<String> outerShow = new Sink<>();
+		Designer d = new Designer();
+		var show = d.hostSink("show", outerShow);
+		var peers = d.map("peers", (String m) -> keyOf(m), perKey ->
+		{
+			var upper = perKey.push("show", "shared.upper", (String m) -> m.toUpperCase());
+			var sink = perKey.hostSinkPerKey("sink", this::sinkFor);
+			perKey.wire(perKey.entry(), upper.in());
+			perKey.wire(upper.out(), sink.in());
+		});
+		assertTrue(d.catalogue().contains("shared.upper"));
+		assertTrue(d.catalogue().contains("peers.sink.object"));
+		pipeline = d.design().build(d.catalogue());
+
+		pipeline.block(peers).put("a:x");
+		assertEquals(List.of("A:X"), sinks.get("a").items());
+		assertTrue(outerShow.items().isEmpty());
+		assertSame(outerShow, pipeline.block(show));
+	}
+
+	@Test
+	void aRefusedMapLeavesTheCatalogueAsItWas()
+	{
+		Designer d = new Designer();
+		d.push("other", "taken", (String s) -> s);
+		assertThrows(IllegalArgumentException.class, () -> d.map("peers", "taken", (String m) -> keyOf(m), perKey ->
+		{
+			var show = perKey.hostSinkPerKey("show", this::sinkFor);
+			perKey.wire(perKey.entry(), show.in());
+		}));
+		assertFalse(d.catalogue().contains("peers.show.object"));
+		assertEquals(1, d.design().nodes().size());
+	}
+
+	@Test
+	void anIdWithADotCanCollideWithANestedNameAndIsRefusedAtOnce()
+	{
+		Designer d = new Designer();
+		d.hostSink("peers.show", new Sink<String>());
+		var e = assertThrows(IllegalArgumentException.class, () -> d.map("peers", (String m) -> keyOf(m), perKey ->
+		{
+			var show = perKey.hostSinkPerKey("show", this::sinkFor);
+			perKey.wire(perKey.entry(), show.in());
+		}));
+		assertTrue(e.getMessage().contains("'peers.show.object'"), e.getMessage());
+	}
+
 	// --- refusals: a nested Design is checked in full when the outer one is built ---
 
 	private static String refusal(Design design, Catalogue catalogue)

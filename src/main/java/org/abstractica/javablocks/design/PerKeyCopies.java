@@ -53,12 +53,18 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 		return handler;
 	}
 
+	/**
+	 * Stops the removed handler's copy, each thread as {@link org.abstractica.javablocks.blocks.basic.ThreadBlock#stop()}
+	 * does. The copy stays tracked until its stop has finished: if this thread is interrupted first, the
+	 * flag is kept and the pipeline's next {@code stop()} finishes the job; its next {@code start()} never
+	 * restarts it.
+	 */
 	@Override
 	public void destroyHandlerBlock(Handler<K, E> handler)
 	{
 		synchronized (this)
 		{
-			live.remove(handler);
+			handler.removed = true;
 		}
 		try
 		{
@@ -66,13 +72,21 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 		} catch (InterruptedException e)
 		{
 			Thread.currentThread().interrupt();
+			return;
+		}
+		synchronized (this)
+		{
+			live.remove(handler);
 		}
 	}
 
 	synchronized void start()
 	{
 		running = true;
-		for (Handler<K, E> h : live) h.copy.start();
+		for (Handler<K, E> h : live)
+		{
+			if (!h.removed) h.copy.start();
+		}
 	}
 
 	/** Stops every live copy; outside this lock, since each stop waits for an in-flight put. */
@@ -84,7 +98,17 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 			running = false;
 			copies = new ArrayList<>(live);
 		}
-		for (Handler<K, E> h : copies) h.copy.stop();
+		for (Handler<K, E> h : copies)
+		{
+			h.copy.stop();
+			if (h.removed)
+			{
+				synchronized (this)
+				{
+					live.remove(h);
+				}
+			}
+		}
 	}
 
 	boolean isRunning()
@@ -108,6 +132,8 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 		private Output<E> target;
 		/** The copy this handler enters; set once it is built. */
 		Pipeline copy;
+		/** Guarded by the factory: removed from the map, its copy never to start again. */
+		boolean removed;
 
 		Handler(K key)
 		{

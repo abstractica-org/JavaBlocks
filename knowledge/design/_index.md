@@ -1,6 +1,6 @@
 ---
 type: project-node
-summary: "The declarative assembly (J12, J13): a Design as plain data, a Catalogue of named Java objects, the typed Designer, and a Pipeline built through the existing factories; a Design is checked whole and every problem reported at once."
+summary: "The declarative assembly (J12–J14): a Design as plain data, a Catalogue of named Java objects, the typed Designer, a Pipeline built through the existing factories, and the map node as a nested Design copied per key; checked whole before building."
 verified: 2026-11-10
 related:
   - path: ..
@@ -12,12 +12,13 @@ related:
 # Design — the declarative assembly
 
 Package `org.abstractica.javablocks.design`; form ruled in J12, names,
-catalogue and map slot in J13. The tests in `src/test/.../design/` are
+catalogue and map slot in J13, the map node built in J14. The tests in `src/test/.../design/` are
 the executable form of this node.
 
 - **A Design is plain data**: `Node(id, kind, settings)`,
   `Wire(from, to)`, `Port(node, name)`. Settings hold only strings,
-  numbers and booleans; a Java object is referred to by a catalogue
+  numbers and booleans, except a map's `perKey`, a nested Design; a
+  Java object is referred to by a catalogue
   name under a key that means "a catalogue name" (`function`,
   `predicate`, `protocol`, `object`, `valueName`).
 - **The Catalogue** holds the Java objects by name. The Designer fills
@@ -38,6 +39,15 @@ the executable form of this node.
   ambiguous; a lambda with a typed parameter is not. Whether to keep
   the witness is open:
   `decisions/2026-11-10-how-should-a-host-write-the-item.md`.
+- **The map node** (J14): `d.map(id, keyFn, perKey -> { ... })`, with
+  `perKey.entry()` (this key's messages) and
+  `perKey.hostSinkPerKey(id, key -> output)`. The nested Design is
+  checked with the outer one; on each new key the map builds a fresh
+  copy, started if the pipeline runs. `Pipeline.stop()` stops its own
+  threads first, then the copies; `removeHandler` stops one copy.
+  Removing or stopping while something still puts into a copy's full
+  buffer hangs, as wired by hand (pinned): remove when the copy is
+  quiet. A copy cannot remove itself from its own thread.
 - **Not built:** `udpSocket`, which waits on
   `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md` (a
   thread reading a UDP socket never stops).

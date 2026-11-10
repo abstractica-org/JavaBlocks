@@ -5,7 +5,6 @@ import org.abstractica.javablocks.blocks.basic.Output;
 import org.abstractica.javablocks.blocks.connection.PingPongProtocol;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -217,6 +216,13 @@ public class Designer
 	 *
 	 * Node ids inside the nested Design are its own; its automatic catalogue names start with
 	 * {@code <id>.}, e.g. {@code peers.show.object}.
+	 *
+	 * <p>Removing a handler ({@code MapBlock.removeHandler}) stops its copy's threads, each as
+	 * {@code ThreadBlock.stop()} does, so three things hang, as they would wired by hand: a removal from
+	 * one of the copy's own threads (a thread cannot stop itself); a thread blocked putting into the
+	 * removed copy's full buffer, which nothing drains any more (and with it a later pipeline stop, if
+	 * that thread is the pipeline's); and, after the pipeline stops, a host thread blocked putting into a
+	 * copy's full buffer. Remove a handler, or stop, when nothing is putting into its copy.
 	 */
 	public <K, E> MapNode<K, E> map(String id, Function<E, K> key, Consumer<PerKeyDesigner<K, E>> perKey)
 	{
@@ -227,11 +233,12 @@ public class Designer
 	public <K, E> MapNode<K, E> map(String id, String name, Function<E, K> key, Consumer<PerKeyDesigner<K, E>> perKey)
 	{
 		requireFree(id);
-		PerKeyDesigner<K, E> nested = new PerKeyDesigner<>(catalogue, prefix + id + ".");
+		// The nested Designer writes into a copy; nothing reaches this catalogue unless all of it fits.
+		PerKeyDesigner<K, E> nested = new PerKeyDesigner<>(new Catalogue(catalogue), prefix + id + ".");
 		perKey.accept(nested);
-		Map<String, Object> settings = new HashMap<>(named(id, FUNCTION, name, key));
-		settings.put(PER_KEY, nested.design());
-		node(id, MAP, settings);
+		Catalogue merged = new Catalogue(((Designer) nested).catalogue).put(name, key);
+		for (String n : merged.names()) catalogue.put(n, merged.get(n));
+		node(id, MAP, Map.of(FUNCTION, name, PER_KEY, nested.design()));
 		return new MapNode<>(id);
 	}
 
