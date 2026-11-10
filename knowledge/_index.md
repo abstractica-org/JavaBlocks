@@ -57,7 +57,7 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
   runnable check), `examples/`, `reporter/`, and `design/` — the
   declarative assembly (J13).
-- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (28).
+- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (29); see `design/` in the tree.
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.
@@ -74,6 +74,5 @@ assessment beside it. Neither is duplicated here.
 - `thread-model/` — the settled thread-domain model and the
   `stop()` contract, crystallized from the J3 characterization tests
   and updated for the J4 fix.
-
-Candidate once it is settled: the shape of the declarative assembly
-once the owner has ruled it.
+- `design/` — the declarative assembly as ruled (J12, J13) and built:
+  Design, Catalogue, Designer, Pipeline, the kind table and its checks.
