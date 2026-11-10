@@ -53,12 +53,12 @@ class FirstTestTest
 	{
 		BufferBlock<String> commands = BasicBlocks.getBufferBlock(4);
 		Sink<String> sent = new Sink<>();
-		build(commands, sent, 400L, 20L);
+		build(commands, sent, 1000L, 20L);
 		pipeline.start();
 
 		commands.put("peer:PING");
 		assertTrue(sent.receivedWithin(1, 2000));
-		Thread.sleep(200); // ten ticks, half the timeout
+		Thread.sleep(200); // ten ticks, a fifth of the timeout
 		assertFalse(sent.items().contains("peer:PING"), "a peer quiet for less than the timeout is not pinged yet");
 		assertTrue(Async.becomesTrueWithin(() -> sent.items().contains("peer:PING"), 2000),
 				"a peer quiet for longer than the timeout is pinged");

@@ -51,10 +51,10 @@ the executable form of this node.
   own thread (a thread cannot stop itself).
 - **Refusals are early and leave nothing behind**: what the data can
   show wrong is refused at build, not at the first message (a capacity-0
-  buffer inside a map's nested Design included); only a `hostSinkPerKey`
-  function's own result (not an Output, or a throw) fails later, at the
-  first put for that key (J14); a refused
-  map merges nothing into the catalogue; the Pipeline copies the
+  buffer inside a map's nested Design included). Host code the data
+  cannot see fails at run time, in the put that runs it: a key function
+  that throws, or a `hostSinkPerKey` function whose result is no Output
+  or that throws (J14). A refused map merges nothing into the catalogue; the Pipeline copies the
   catalogue at build, so later edits to the caller's catalogue do not
   reach it. A removed copy stays tracked until its stop has finished,
   so an interrupted stopper loses no copy.
