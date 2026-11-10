@@ -648,3 +648,31 @@ per-key function returning no Output or throwing fails the put; the
 pinned limit above; the build-time refusals for nested Designs,
 including a capacity-0 buffer inside a map.
 Existing tests unchanged.
+
+## J15 — FirstTest rebuilt through the Design (goal 2; autopilot run 7)
+
+Goal 2 is done when the FirstTest ping-pong pipeline and the
+`examples/udp` pipelines are rebuilt through the assembly, with tests
+(`tools/autopilot/GOALS.md`). The UDP ones wait on the socket record
+(`decisions/2026-11-10-should-a-thread-that-is-waiting-on.md`); FirstTest
+needs no socket, so it goes first.
+
+- **What changes.** `FirstTest.main` builds the same pipeline as before —
+  keyboard → driver thread → ping-pong block sending through
+  `SimpleSender`; constant 5000 ms timeout → timer thread → 10 s delay →
+  the ping-pong block's timer — but as a Design: nodes `keyboard`,
+  `driver`, `ping`, `sender`, `timeout`, `timer`, `tick`. The wiring is a
+  package-private `FirstTest.design(Designer, PullOut<String> commands,
+  Output<String> sender)`, so a test can stand a host source in for the
+  keyboard (a program-wide singleton) and a sink in for the sender.
+  `main` passes the keyboard and a `SimpleSender`, then builds and
+  starts.
+- **What does not change.** No library code, no public API, no existing
+  test. The timings and every block are the ones FirstTest used; the
+  ping-pong block still sends through `SimpleSender`, now as a host sink
+  wired to its `send` port instead of a constructor argument (the
+  builder hands it to the constructor the same way).
+- **Tests.** `FirstTestTest` builds `FirstTest.design` with a host
+  source and a sink: a ping from a peer is answered with a pong through
+  the sender, and the pipeline stops. Proven able to fail by one-line
+  mutations of `FirstTest.design`.
