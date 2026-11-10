@@ -445,3 +445,81 @@ catalogue); and the map block's per-key handler slot. Every public name
 is the owner's (delegation). Code starts with the next J entry, after
 the names and the catalogue are ruled; the map node waits for its own
 ruling.
+
+## J13 — the Design core: names, catalogue and map slot ruled; the core built without the map and socket nodes (owner rulings, 2026-11-09; carried out by autopilot run 5)
+
+Carries out three rulings on J12's follow-ups:
+
+- `decisions/2026-11-09-what-should-the-pipeline-builder-s-public-names.md`,
+  ruled **Design, Designer, Pipeline, with push and pull ports**: package
+  `org.abstractica.javablocks.design`; `Design` (records `Design.Node(id,
+  kind, settings)`, `Design.Wire(from, to)`, `Design.Port(node, name)`);
+  the typed builder `Designer`; `Pipeline`, a `ThreadControl` with a typed
+  `block(node)`; ports `PushOut`/`PushIn`/`PullOut`/`PullIn`, and
+  `wire` accepts only push→push and pull→pull; one handle per kind named
+  `<Kind>Node`; optional `info()`/`debug()`/`error()` reporter ports on
+  every node that is a block, except the program-wide keyboard and console;
+  kind names after the factory methods, plus `pingPong`, `hostSink`,
+  `hostSource`.
+- `decisions/2026-11-09-how-should-a-pipeline-design-name-the.md`, ruled
+  **names in the Design, objects in a catalogue; the builder fills both**:
+  `Catalogue`, `Designer.catalogue()`, auto-names `<node>.function` and so
+  on, the named form `push(id, name, fn)` (and pull, ifBlock, pingPong);
+  a constant or variable value that is not plain data is stored by name.
+  A Design whose names the catalogue lacks is refused at build time,
+  naming every missing entry.
+- `decisions/2026-11-09-how-should-the-map-block-s-per-key-handler.md`,
+  ruled **a nested Design, copied once per key** (`perKey`, `entry()`,
+  `hostSinkPerKey`). Built last within goal 2, as the record said; not in
+  this step.
+
+**This step builds the core** (Design, Catalogue, Designer, Pipeline, the
+four port types, the handles) and every kind except two: `map` (its own
+step, as ruled) and `udpSocket`, held back by a wart found while
+building: interrupting a thread does not wake a `DatagramSocket.receive`
+(probed on Java 25), only closing the socket does. So a `ThreadBlock`
+reading a socket never stops, and the ruled pipeline order "stop the
+threads, then close the sockets" would hang; the existing
+`BufferedSocketBlock.stop()` hangs the same way whenever no packet
+arrives. That is a newly found wart, so it goes to its own decision record
+and nothing in the blocks changes here.
+
+**Inside decisions** (the steward's, the outside being ruled):
+
+- Settings hold only plain data: strings, numbers, booleans. A catalogue
+  reference is a string under a key that means "a catalogue name":
+  `function`, `predicate`, `protocol`, `object`, and `valueName` for a
+  constant or variable whose value is not plain (a plain one is `value`);
+  `capacity` for a buffer. No extra public type for references.
+- Port names in the data are the handle methods' names: `in`, `out`,
+  `whenTrue`, `whenFalse`, `timer`, `send`, `info`, `debug`, `error`. A
+  wire runs in the direction data flows: a push wire from the slot that
+  holds an Output to the block that is one, a pull wire from the block that
+  is an Input to the slot that holds one.
+- The handles share one public base, `NodeHandle<B>`, where `B` is the
+  built object's type; `Pipeline.block(NodeHandle<B>)` returns a `B`, and
+  `Pipeline.block(String id)` serves a Design read from elsewhere.
+- Errors in a Design are `IllegalArgumentException`s that list every
+  problem at once: duplicate ids, an unknown kind, node or port, a wire
+  that is neither push→push nor pull→pull (data from elsewhere has no
+  compiler), a single slot wired twice (only the distributor's `out` takes
+  many), a missing catalogue name or one of the wrong type, a required slot
+  left unwired (a thread's `in` and `out`, a push block's `out`, a pull
+  block's `in`, an if block's `whenTrue` and `whenFalse`, a ping-pong
+  block's `send`), and ping-pong blocks whose senders form a cycle. Each
+  of these failed today inside a worker thread or as a null pointer; "a
+  wire no thread drives" is not checked yet.
+- Building constructs every node through the existing factories, ping-pong
+  blocks after whatever their `send` is wired to (its constructor takes the
+  sender), then applies the wires through the existing setters. Unwired
+  reporter ports keep the library defaults (J10).
+- `Pipeline.start()` starts every thread block in node order; `stop()`
+  stops each in node order (each stop as J4 pins it); `isRunning()` is
+  true while any of them runs.
+
+**Tests:** a new `design` test package: the Designer writes the data the
+rulings describe; pipelines built from a Design behave as the same
+pipelines wired by hand (functions, buffers, if, distributor, variable,
+pull chains, ping-pong, reporter ports); a Design written as plain data
+builds with a catalogue; every build-time refusal above. No existing test
+changes, and `src/main` outside the new package is untouched.
