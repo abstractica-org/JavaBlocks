@@ -1,46 +1,58 @@
 package org.abstractica.javablocks.examples.udp;
 
-import org.abstractica.javablocks.blocks.basic.*;
-import org.abstractica.javablocks.blocks.udp.UDPBlocks;
 import org.abstractica.javablocks.blocks.udp.UDPFunctions;
-import org.abstractica.javablocks.blocks.udp.UDPSocketBlock;
+import org.abstractica.javablocks.design.Designer;
+import org.abstractica.javablocks.design.Pipeline;
+import org.abstractica.javablocks.design.PullOut;
+import org.abstractica.javablocks.design.PushIn;
+import org.abstractica.javablocks.design.UdpSocketNode;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
+/** Sends each line typed to its own socket and prints what the socket receives. Built as a Design (J18). */
 public class SimpleUDPExample
 {
     public static void main(String[] args) throws UnknownHostException, SocketException
     {
-        Input<String> keyboard = BasicBlocks.getKeyboardBlock();
-        Output<String> console = BasicBlocks.getConsoleBlock();
-        ThreadBlock<DatagramPacket> writeThread = BasicBlocks.getThreadBlock();
-        ThreadBlock<DatagramPacket> readThread = BasicBlocks.getThreadBlock();
-        PullBlock<String, DatagramPacket> stringToDatagramPacket = BasicBlocks.getPullBlock(UDPFunctions.getStringToDatagramPacketFunction());
-        PushBlock<DatagramPacket, String> datagramPacketToString = BasicBlocks.getPushBlock(UDPFunctions.getDatagramPacketToStringFunction());
-        PushBlock<DatagramPacket, DatagramPacket> addressBlock = BasicBlocks.getPushBlock(UDPFunctions.getAddressFunction(InetAddress.getLocalHost(), 3337));
-        UDPSocketBlock<DatagramPacket> socket = UDPBlocks.getUDPSocketBlock(3337, 1024);
+        Designer d = new Designer();
+        UdpSocketNode socket = design(d, d.keyboard("keyboard").out(), d.console("console").in(),
+                InetAddress.getLocalHost(), 3337);
+        Pipeline pipeline = ExamplePipelines.build(d);
 
-        System.out.println("Socket on: " + socket.getAddress());
+        System.out.println("Socket on: " + pipeline.block(socket).getAddress());
 
-        //Hook it up
+        //Start the threads
+        pipeline.start();
+    }
+
+    /**
+     * Adds the pipeline to {@code d}: a reader thread pulls packets from a socket on {@code port} and
+     * pushes their text into {@code console}; a writer thread pulls each line from {@code lines} as a
+     * packet, addresses it to {@code address} and {@code port} (the socket itself) and pushes it in.
+     */
+    static UdpSocketNode design(Designer d, PullOut<String> lines, PushIn<String> console, InetAddress address, int port)
+    {
+        var socket = d.udpSocket("socket", port, 1024);
+        var readThread = d.<DatagramPacket>thread("readThread"); // first: it is started first
+        var writeThread = d.<DatagramPacket>thread("writeThread");
+        var stringToDatagramPacket = d.pull("stringToDatagramPacket", UDPFunctions.getStringToDatagramPacketFunction());
+        var datagramPacketToString = d.push("datagramPacketToString", UDPFunctions.getDatagramPacketToStringFunction());
+        var addressBlock = d.push("addressBlock", UDPFunctions.getAddressFunction(address, port));
 
         //Writer
-        stringToDatagramPacket.setInput(keyboard);
-        writeThread.setInput(stringToDatagramPacket);
-        writeThread.setOutput(addressBlock);
-        addressBlock.setOutput(socket);
+        d.wire(lines, stringToDatagramPacket.in());
+        d.wire(stringToDatagramPacket.out(), writeThread.in());
+        d.wire(writeThread.out(), addressBlock.in());
+        d.wire(addressBlock.out(), socket.in());
 
         //Reader
-        readThread.setInput(socket);
-        readThread.setOutput(datagramPacketToString);
-        datagramPacketToString.setOutput(console);
+        d.wire(socket.out(), readThread.in());
+        d.wire(readThread.out(), datagramPacketToString.in());
+        d.wire(datagramPacketToString.out(), console);
 
-
-        //Start the thread
-        readThread.start();
-        writeThread.start();
+        return socket;
     }
 }

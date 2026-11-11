@@ -1,7 +1,7 @@
 ---
 id: 2026-11-10-should-a-thread-that-is-waiting-on
 title: Should a thread that is waiting on a UDP socket stop when it is asked to?
-status: ruled
+status: done
 stakes: medium
 confidence: 82
 opened: 2026-11-10
@@ -74,3 +74,7 @@ BufferedSocketBlock.stop() keeps hanging when no packets arrive. The Design gets
 ## Ruling
 
 **The socket block wakes up on interrupt, by checking every 100 ms** (`the-socket-block-wakes-up-on-interrupt-by-checking-every-100-ms`). Tog, 2026-11-11, from the project pages.
+
+## Done
+
+2026-11-11, autopilot run 8: fixed as ruled (J16 in `design/decision-log.md`). `UDPSocketBlockImpl.get()` waits 100 ms at a time and throws `InterruptedException` when its thread is interrupted; the socket stays open. The pinning test is flipped (`BufferedSocketBlock.stop()` now returns with no packet and no outside close) and three new tests pin the socket block itself; each was proven able to fail.

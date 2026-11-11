@@ -203,6 +203,18 @@ public sealed class Designer permits PerKeyDesigner
 	}
 
 	/**
+	 * A UDP socket on {@code port} (0: any free port) that receives packets of up to
+	 * {@code maxPacketSize} bytes. It is opened when the pipeline is built and closed by
+	 * {@link Pipeline#stop()}, after which that pipeline cannot be started again. Inside a map's nested
+	 * Design every copy opens its own, so only {@code port} 0 suits more than one key.
+	 */
+	public UdpSocketNode udpSocket(String id, int port, int maxPacketSize)
+	{
+		node(id, UDP_SOCKET, Map.of(PORT, port, MAX_PACKET_SIZE, maxPacketSize));
+		return new UdpSocketNode(id);
+	}
+
+	/**
 	 * A map: sorts the items pushed in by {@code key} and, on the first item with an unseen key, builds a
 	 * fresh copy of the nested Design {@code perKey} writes, for that key. The copy's threads start with
 	 * the pipeline and stop with it, or when its handler is removed from the map.

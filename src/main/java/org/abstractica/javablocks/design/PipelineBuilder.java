@@ -12,6 +12,11 @@ import org.abstractica.javablocks.blocks.basic.ThreadBlock;
 import org.abstractica.javablocks.blocks.connection.PingPongBlock;
 import org.abstractica.javablocks.blocks.connection.PingPongProtocol;
 import org.abstractica.javablocks.blocks.connection.impl.PingPongBlockImpl;
+import org.abstractica.javablocks.blocks.udp.UDPBlocks;
+import org.abstractica.javablocks.blocks.udp.UDPSocketBlock;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +42,8 @@ final class PipelineBuilder
 	private final Map<String, Object> built = new LinkedHashMap<>();
 	/** The handler factories of the map nodes built here. */
 	private final List<PerKeyCopies<?, ?>> maps = new ArrayList<>();
+	/** The sockets this build opened for its udpSocket nodes; never a socket the host handed in. */
+	private final List<UDPSocketBlock<?>> sockets = new ArrayList<>();
 	/** True when this is a map's nested Design. */
 	private final boolean nested;
 	/** The key a nested Design's copy is built for; null otherwise. */
@@ -59,9 +66,8 @@ final class PipelineBuilder
 		{
 			throw new IllegalArgumentException("the Design cannot be built:\n  - " + String.join("\n  - ", b.problems));
 		}
-		b.construct();
-		b.connect();
-		return new Pipeline(b.built, b.maps);
+		b.constructAndConnect();
+		return new Pipeline(b.built, b.maps, b.sockets);
 	}
 
 	/**
@@ -76,9 +82,8 @@ final class PipelineBuilder
 		{
 			throw new IllegalStateException("checked when the pipeline was built: " + b.problems);
 		}
-		b.construct();
-		b.connect();
-		Pipeline copy = new Pipeline(b.built, b.maps);
+		b.constructAndConnect();
+		Pipeline copy = new Pipeline(b.built, b.maps, b.sockets);
 		for (Design.Node n : b.nodes.values())
 		{
 			if (n.kind().equals(ENTRY))
@@ -205,6 +210,17 @@ final class PipelineBuilder
 			// checked here, it is refused when the pipeline is built.
 			problems.add("node '" + n.id() + "': buffer capacity must be at least 1, was " + c);
 		}
+		if (n.kind().equals(UDP_SOCKET))
+		{
+			if (n.settings().get(PORT) instanceof Integer port && (port < 0 || port > 65535))
+			{
+				problems.add("node '" + n.id() + "': port must be 0 (any free port) to 65535, was " + port);
+			}
+			if (n.settings().get(MAX_PACKET_SIZE) instanceof Integer size && size < 0)
+			{
+				problems.add("node '" + n.id() + "': maxPacketSize must not be negative, was " + size);
+			}
+		}
 		if (n.kind().equals(MAP) && n.settings().get(PER_KEY) instanceof Design perKey)
 		{
 			PipelineBuilder inner = new PipelineBuilder(perKey, catalogue, true, null);
@@ -273,6 +289,20 @@ final class PipelineBuilder
 	}
 
 	// --- building: every check has passed ---
+
+	/** Builds and wires every node; if that fails, no socket opened on the way stays open. */
+	private void constructAndConnect()
+	{
+		try
+		{
+			construct();
+			connect();
+		} catch (RuntimeException | Error e)
+		{
+			for (UDPSocketBlock<?> socket : sockets) socket.close();
+			throw e;
+		}
+	}
 
 	private void construct()
 	{
@@ -351,6 +381,7 @@ final class PipelineBuilder
 					maps.add(copies);
 					yield BasicBlocks.getMapBlock(copies);
 				}
+				case UDP_SOCKET -> socket(n);
 				case ENTRY -> new PerKeyCopies.Handler<>(key);
 				case HOST_SINK_PER_KEY -> perKeyObject(n);
 				default -> throw new IllegalStateException("kind '" + n.kind() + "' is in the table but not built");
@@ -358,6 +389,22 @@ final class PipelineBuilder
 		} catch (IllegalArgumentException e)
 		{
 			throw new IllegalArgumentException("node '" + n.id() + "': " + e.getMessage(), e);
+		}
+	}
+
+	/** Opens a udpSocket node's socket; a port that cannot be bound is the host's surroundings, not the Design. */
+	private Object socket(Design.Node n)
+	{
+		int port = (Integer) n.settings().get(PORT);
+		try
+		{
+			UDPSocketBlock<?> socket = UDPBlocks.getUDPSocketBlock(port, (Integer) n.settings().get(MAX_PACKET_SIZE));
+			sockets.add(socket);
+			return socket;
+		} catch (IOException e)
+		{
+			throw new UncheckedIOException("node '" + n.id() + "': the socket on port " + port
+					+ " could not be opened: " + e.getMessage(), e);
 		}
 	}
 

@@ -1,7 +1,7 @@
 ---
 type: project-node
 summary: "Thread model: only ThreadBlock owns a thread, blocking lives in get/put, stop() waits for the in-flight put then exits (J4), where map, distributor and ping-pong lock (J5–J11); all pinned, and how to pin a blocked thread without a race."
-verified: 2026-11-10
+verified: 2026-11-11
 related:
   - path: ..
     rationale: The orientation names this node as the thread-domain model, crystallized after J3.
@@ -10,7 +10,7 @@ related:
 # Thread model
 
 Settled by the J3 characterization tests (2026-08-26), the stop()
-contract updated by the J4 fix and the J5–J11 cleanups (2026-11-09); each fact below
+contract updated by the J4 fix, the J5–J11 cleanups (2026-11-09) and the socket fix (J16, 2026-11-11); each fact below
 is pinned by a test that has been proven able to fail. The tests are
 the executable form of this node — change them and this text together.
 
@@ -46,11 +46,11 @@ completed `put`, and resets `running` whenever it ends. Pinned in
   once. One inside a `get()` that survives the interrupt
   (`ConstantBlock`) finishes that get, delivers that one item, and
   exits — stop is prompt, not instant. The UDP socket's `get()` is
-  worse: an interrupt never wakes `DatagramSocket.receive`, only a
-  packet or closing the socket does, so while no packet arrives
-  `stop()` waits forever (pinned in
-  `BufferedSocketBlockCharacterizationTest`, found 2026-11-10; the fix
-  is `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md`). A delay function
+  interruptible since J16: Java never wakes `DatagramSocket.receive` on
+  an interrupt, so the block waits 100 ms at a time and checks the flag
+  between waits. A reader stops within about 100 ms, the socket stays
+  open (pinned in `UDPSocketBlockCharacterizationTest`; before J16 such
+  a `stop()` waited forever). A delay function
   on the input side returns early on the interrupt and keeps the flag
   (J9), so the worker delivers the item in hand at once and exits. The
   timer idiom (`FirstTest`, delay on the output side) is stoppable;

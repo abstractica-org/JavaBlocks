@@ -1,7 +1,7 @@
 ---
 id: 2026-11-10-how-should-a-host-write-the-item
 title: How should a host write the item type of a thread, buffer, distributor or trashcan node?
-status: ruled
+status: done
 stakes: low
 confidence: 80
 opened: 2026-11-10
@@ -62,3 +62,7 @@ The builder stays as built: hosts write `d.<String>thread("driver")` for those f
 ## Ruling
 
 **Write the type in angle brackets, as built** (`write-the-type-in-angle-brackets-as-built`). Tog, 2026-11-11, from the project pages.
+
+## Done
+
+2026-11-11, autopilot run 8: nothing to build. The ruling keeps the Designer as it is: hosts write `d.<String>thread("driver")` for thread, buffer, distributor and trashcan nodes. `knowledge/design/` no longer calls the question open.

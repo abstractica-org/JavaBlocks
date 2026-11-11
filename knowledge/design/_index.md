@@ -1,7 +1,7 @@
 ---
 type: project-node
-summary: "The declarative assembly (J12–J14): a Design as plain data, a Catalogue of named Java objects, the typed Designer, a Pipeline built through the existing factories, and the map node as a nested Design copied per key; checked whole before building."
-verified: 2026-11-10
+summary: "The declarative assembly (J12–J17): a Design as plain data, a Catalogue of named Java objects, the typed Designer, a Pipeline built through the existing factories; map nodes copy a nested Design per key, stop() closes socket nodes."
+verified: 2026-11-11
 related:
   - path: ..
     rationale: The orientation names the design package as goal 2's assembly.
@@ -12,7 +12,7 @@ related:
 # Design — the declarative assembly
 
 Package `org.abstractica.javablocks.design`; form ruled in J12, names,
-catalogue and map slot in J13, the map node built in J14. The tests in `src/test/.../design/` are
+catalogue and map slot in J13, the map node built in J14, the socket node in J17. The tests in `src/test/.../design/` are
 the executable form of this node.
 
 - **A Design is plain data**: `Node(id, kind, settings)`,
@@ -36,9 +36,10 @@ the executable form of this node.
 - **Java needs a type witness** for nodes whose methods take no typed
   argument: `d.<String>thread("driver")` (also buffer, distributor,
   trashcan). A method reference such as `String::toLowerCase` can be
-  ambiguous; a lambda with a typed parameter is not. Whether to keep
-  the witness is open:
-  `decisions/2026-11-10-how-should-a-host-write-the-item.md`.
+  ambiguous; a lambda with a typed parameter is not. The owner
+  ruled to keep the witness (2026-11-11,
+  `decisions/2026-11-10-how-should-a-host-write-the-item.md`); passing
+  a `Class` or untyped wires were rejected.
 - **The map node** (J14): `d.map(id, keyFn, perKey -> { ... })`, with
   `perKey.entry()` (this key's messages) and
   `perKey.hostSinkPerKey(id, key -> output)`. The nested Design is
@@ -58,6 +59,17 @@ the executable form of this node.
   catalogue at build, so later edits to the caller's catalogue do not
   reach it. A removed copy stays tracked until its stop has finished,
   so an interrupted stopper loses no copy.
-- **Not built:** `udpSocket`, which waits on
-  `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md` (a
-  thread reading a UDP socket never stops).
+- **The socket node** (J17): `d.udpSocket(id, port, maxPacketSize)`,
+  ports `in` (send) and `out` (receive). The socket is opened at build
+  (a taken port is an `UncheckedIOException` naming the node, and every
+  socket opened so far is closed again); `Pipeline.stop()` closes it
+  last, after the threads and the maps' copies, started or not. A
+  closed socket cannot be reopened, so a pipeline whose sockets were
+  closed refuses `start()` before starting anything: build the Design
+  again. Inside a map each copy opens its own socket when its key
+  arrives (only port 0 suits several keys) and closes it when the copy
+  stops; removing a closed copy's handler lifts the refused restart.
+  Only sockets the build opened are ever closed: a socket block the
+  host made and wired in as a host source or sink stays the host's.
+  A put racing `removeHandler` for its key can hit the removed copy's
+  closed socket and fail: remove when nothing is putting for that key.

@@ -21,12 +21,12 @@ runtime, everything built through static factories such as
 **Active** — version 0.2.1 is the 0.2.0 code pinned by
 characterization tests that describe its concurrency behaviour. Since
 then, on `main`, every known defect has been fixed one at a time, and
-a declarative way to assemble pipelines has arrived: a pipeline written
-as plain data by a typed Java builder, including maps that run one
-small pipeline per key (`design` package, 97 tests in all). The
-ping-pong demo is now built that way; still to come: the UDP socket,
-and the UDP demos rebuilt through it.
-(2026-11-10)
+a declarative way to assemble pipelines is complete: a pipeline written
+as plain data by a typed Java builder, with maps that run one small
+pipeline per key and UDP sockets that the pipeline opens and closes
+(`design` package, 127 tests in all). The ping-pong demo and the UDP
+examples are built that way. Next: an adapter for a graphical viewer.
+(2026-11-11)
 
 ## Quick start
 
