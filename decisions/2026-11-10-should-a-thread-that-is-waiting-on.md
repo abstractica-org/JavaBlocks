@@ -1,10 +1,11 @@
 ---
 id: 2026-11-10-should-a-thread-that-is-waiting-on
 title: Should a thread that is waiting on a UDP socket stop when it is asked to?
-status: proposed
+status: ruled
 stakes: medium
 confidence: 82
 opened: 2026-11-10
+ruled: 2026-11-11
 repo: javablocks
 by: d50818be-0fda-494c-b996-7f3746f145f0
 recommends: the-socket-block-wakes-up-on-interrupt-by-checking-every-100-ms
@@ -69,3 +70,7 @@ Wake on interrupt by checking every 100 ms. It fixes the cause in the one block 
 ## If nothing is decided
 
 BufferedSocketBlock.stop() keeps hanging when no packets arrive. The Design gets no udpSocket node, so goal 2 stops short of rebuilding the UDP examples. Runs can still rebuild FirstTest through the Design and build the map node.
+
+## Ruling
+
+**The socket block wakes up on interrupt, by checking every 100 ms** (`the-socket-block-wakes-up-on-interrupt-by-checking-every-100-ms`). Tog, 2026-11-11, from the project pages.
