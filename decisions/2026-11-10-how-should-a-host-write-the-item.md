@@ -1,10 +1,11 @@
 ---
 id: 2026-11-10-how-should-a-host-write-the-item
 title: How should a host write the item type of a thread, buffer, distributor or trashcan node?
-status: proposed
+status: ruled
 stakes: low
 confidence: 80
 opened: 2026-11-10
+ruled: 2026-11-11
 repo: javablocks
 by: d50818be-0fda-494c-b996-7f3746f145f0
 recommends: write-the-type-in-angle-brackets-as-built
@@ -57,3 +58,7 @@ Keep the angle brackets, as built. It is the only option that keeps full type sa
 ## If nothing is decided
 
 The builder stays as built: hosts write `d.<String>thread("driver")` for those four kinds. Nothing is blocked.
+
+## Ruling
+
+**Write the type in angle brackets, as built** (`write-the-type-in-angle-brackets-as-built`). Tog, 2026-11-11, from the project pages.
