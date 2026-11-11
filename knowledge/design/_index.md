@@ -1,7 +1,7 @@
 ---
 type: project-node
 summary: "The declarative assembly (J12–J14): a Design as plain data, a Catalogue of named Java objects, the typed Designer, a Pipeline built through the existing factories, and the map node as a nested Design copied per key; checked whole before building."
-verified: 2026-11-10
+verified: 2026-11-11
 related:
   - path: ..
     rationale: The orientation names the design package as goal 2's assembly.
@@ -36,9 +36,10 @@ the executable form of this node.
 - **Java needs a type witness** for nodes whose methods take no typed
   argument: `d.<String>thread("driver")` (also buffer, distributor,
   trashcan). A method reference such as `String::toLowerCase` can be
-  ambiguous; a lambda with a typed parameter is not. Whether to keep
-  the witness is open:
-  `decisions/2026-11-10-how-should-a-host-write-the-item.md`.
+  ambiguous; a lambda with a typed parameter is not. The owner
+  ruled to keep the witness (2026-11-11,
+  `decisions/2026-11-10-how-should-a-host-write-the-item.md`); passing
+  a `Class` or untyped wires were rejected.
 - **The map node** (J14): `d.map(id, keyFn, perKey -> { ... })`, with
   `perKey.entry()` (this key's messages) and
   `perKey.hostSinkPerKey(id, key -> output)`. The nested Design is
