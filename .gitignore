@@ -6,3 +6,5 @@
 
 # Foundation session-logger state (per-session)
 sessions/state/
+# Session logs stay out of git in a public repository
+sessions/*.md
