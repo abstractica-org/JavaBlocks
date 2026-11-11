@@ -789,3 +789,48 @@ fixed in J16. This step builds it.
   refuses the restart until its handler is removed; a copy whose socket
   cannot open fails the put and leaves no handler. Existing tests
   unchanged.
+
+## J18 — the `examples/udp` pipelines rebuilt through the Design (goal 2's last part; autopilot run 8)
+
+Goal 2 is done when the FirstTest pipeline and the `examples/udp`
+pipelines are rebuilt through the assembly, with tests. FirstTest was
+J15; with the socket node (J17) the UDP examples follow, the same way.
+
+- **What changes.** The four classes that wire a pipeline now write it
+  as a Design, each in a package-private `design(...)` method (as
+  `FirstTest.design`), so a test can stand a host source in for the
+  keyboard and a sink in for the console, both program-wide singletons:
+  `KeyboardToUDP` (keyboard → string to packet → address → thread →
+  socket), `UDPToConsole` (socket → thread → packet to string →
+  console), `SimpleUDPExample` (both halves on one socket) and
+  `SimpleDatagramPacketExample` (no socket: keyboard → packet → thread →
+  string → console). Same blocks, same functions, same pull and push
+  sides, same ports (3337 and 1024 bytes in `SimpleUDPExample`), the
+  reader started before the writer as before.
+  `SimpleUDPExample2`, `UDPReciever` and `UDPSender` only use the first
+  two classes and are untouched.
+- **What does not change.** No library code, no public signature:
+  `KeyboardToUDP` and `UDPToConsole` keep their constructors (and their
+  `throws SocketException, UnknownHostException`: a socket that cannot
+  be opened still surfaces as the `SocketException` it was, unwrapped
+  from the builder's `UncheckedIOException` by a small package-private
+  helper, `ExamplePipelines.build`) and stay `ThreadControl`s.
+- **What does change in behaviour, and why.** `KeyboardToUDP.stop()` and
+  `UDPToConsole.stop()` are now `Pipeline.stop()`, which closes the
+  socket as ruled (J13, J17). So a stopped one cannot be started again
+  (`IllegalStateException`); before, `KeyboardToUDP` never closed its
+  socket and could be restarted, and `UDPToConsole.stop()` hung until a
+  packet came (the wart fixed in J16). A consequence of the ruled
+  Pipeline, not a new choice; pinned by a test and named in the run
+  report for the owner.
+- **Tests** (`UdpExamplesTest`, each proven able to fail by one-line
+  mutations of the four `design` methods and the two classes): each
+  line pulled by `KeyboardToUDP`'s pipeline reaches the receiver's port
+  as a packet; `UDPToConsole`'s pipeline pushes each packet's text to
+  its console, cut to the packet size it was given; `SimpleUDPExample`'s
+  pipeline sends a line to its own socket and shows it; the
+  packet round trip of `SimpleDatagramPacketExample`; and the two real
+  classes: `UDPToConsole` prints a packet on the real console, stops
+  with no packet arriving, frees its port and refuses a restart; a
+  taken port is still a `SocketException` from both constructors; a
+  never started `KeyboardToUDP`'s `stop()` frees its port.
