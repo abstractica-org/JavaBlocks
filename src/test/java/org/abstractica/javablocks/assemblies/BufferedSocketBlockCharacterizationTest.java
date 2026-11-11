@@ -22,15 +22,21 @@ class BufferedSocketBlockCharacterizationTest
 		BufferedSocketBlock<String> block = Assemblies.getBufferedSocketBlock(0, 1024, 4,
 				UDPFunctions.getDatagramPacketToStringFunction(),
 				UDPFunctions.getStringToDatagramPacketFunction());
-		block.start();
-		assertTrue(block.isRunning());
-		Thread.sleep(300); // the receive thread is waiting in the socket, several checks in
+		try
+		{
+			block.start();
+			assertTrue(block.isRunning());
+			Thread.sleep(300); // the receive thread is waiting in the socket, several checks in
 
-		Thread stopper = Async.daemon(block::stop);
+			Thread stopper = Async.daemon(block::stop);
 
-		assertTrue(Async.finishesWithin(stopper, 2000),
-				"stop() interrupts the receive thread, which notices within about 100 ms; no packet, no outside close");
-		assertFalse(block.isRunning());
+			assertTrue(Async.finishesWithin(stopper, 2000),
+					"stop() interrupts the receive thread, which notices within about 100 ms; no packet, no outside close");
+			assertFalse(block.isRunning());
+		} finally
+		{
+			block.close();
+		}
 	}
 
 	/** The assembly passes the socket block's {@code getPort()} on, wart included: always -1. */

@@ -42,6 +42,8 @@ final class PipelineBuilder
 	private final Map<String, Object> built = new LinkedHashMap<>();
 	/** The handler factories of the map nodes built here. */
 	private final List<PerKeyCopies<?, ?>> maps = new ArrayList<>();
+	/** The sockets this build opened for its udpSocket nodes; never a socket the host handed in. */
+	private final List<UDPSocketBlock<?>> sockets = new ArrayList<>();
 	/** True when this is a map's nested Design. */
 	private final boolean nested;
 	/** The key a nested Design's copy is built for; null otherwise. */
@@ -65,7 +67,7 @@ final class PipelineBuilder
 			throw new IllegalArgumentException("the Design cannot be built:\n  - " + String.join("\n  - ", b.problems));
 		}
 		b.constructAndConnect();
-		return new Pipeline(b.built, b.maps);
+		return new Pipeline(b.built, b.maps, b.sockets);
 	}
 
 	/**
@@ -81,7 +83,7 @@ final class PipelineBuilder
 			throw new IllegalStateException("checked when the pipeline was built: " + b.problems);
 		}
 		b.constructAndConnect();
-		Pipeline copy = new Pipeline(b.built, b.maps);
+		Pipeline copy = new Pipeline(b.built, b.maps, b.sockets);
 		for (Design.Node n : b.nodes.values())
 		{
 			if (n.kind().equals(ENTRY))
@@ -295,12 +297,9 @@ final class PipelineBuilder
 		{
 			construct();
 			connect();
-		} catch (RuntimeException e)
+		} catch (RuntimeException | Error e)
 		{
-			for (Object o : built.values())
-			{
-				if (o instanceof UDPSocketBlock<?> socket) socket.close();
-			}
+			for (UDPSocketBlock<?> socket : sockets) socket.close();
 			throw e;
 		}
 	}
@@ -399,7 +398,9 @@ final class PipelineBuilder
 		int port = (Integer) n.settings().get(PORT);
 		try
 		{
-			return UDPBlocks.getUDPSocketBlock(port, (Integer) n.settings().get(MAX_PACKET_SIZE));
+			UDPSocketBlock<?> socket = UDPBlocks.getUDPSocketBlock(port, (Integer) n.settings().get(MAX_PACKET_SIZE));
+			sockets.add(socket);
+			return socket;
 		} catch (IOException e)
 		{
 			throw new UncheckedIOException("node '" + n.id() + "': the socket on port " + port

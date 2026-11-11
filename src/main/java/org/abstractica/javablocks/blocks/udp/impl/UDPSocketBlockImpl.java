@@ -43,9 +43,10 @@ public class UDPSocketBlockImpl extends AbstractBlock
     }
 
     /**
-     * Waits for a packet. An interrupt does not wake a socket's receive, so the wait is cut into
+     * Waits for a packet. On a platform thread an interrupt does not wake a socket's receive, so the wait is cut into
      * {@value #INTERRUPT_CHECK_MILLIS} ms pieces with a check between them: an interrupted get() throws
-     * within about that long, and the socket stays open.
+     * within about that long, and the socket stays open. (On a virtual thread Java itself answers the
+     * interrupt, by closing the socket, as it did before.)
      */
     @Override
     public DatagramPacket get() throws InterruptedException

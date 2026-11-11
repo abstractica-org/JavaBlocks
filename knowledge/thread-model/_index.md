@@ -49,9 +49,8 @@ completed `put`, and resets `running` whenever it ends. Pinned in
   interruptible since J16: Java never wakes `DatagramSocket.receive` on
   an interrupt, so the block waits 100 ms at a time and checks the flag
   between waits. A reader stops within about 100 ms, the socket stays
-  open, and a packet arriving with the interrupt is delivered (pinned in
-  `UDPSocketBlockCharacterizationTest`; before J16 such a `stop()`
-  waited forever). A delay function
+  open (pinned in `UDPSocketBlockCharacterizationTest`; before J16 such
+  a `stop()` waited forever). A delay function
   on the input side returns early on the interrupt and keeps the flag
   (J9), so the worker delivers the item in hand at once and exits. The
   timer idiom (`FirstTest`, delay on the output side) is stoppable;

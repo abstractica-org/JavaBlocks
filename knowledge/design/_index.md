@@ -69,3 +69,5 @@ the executable form of this node.
   again. Inside a map each copy opens its own socket when its key
   arrives (only port 0 suits several keys) and closes it when the copy
   stops; removing a closed copy's handler lifts the refused restart.
+  Only sockets the build opened are ever closed: a socket block the
+  host made and wired in as a host source or sink stays the host's.

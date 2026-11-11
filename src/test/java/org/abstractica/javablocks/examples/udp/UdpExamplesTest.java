@@ -132,6 +132,8 @@ class UdpExamplesTest
 		Designer d = new Designer();
 		var socket = SimpleUDPExample.design(d, d.hostSource("lines", lines).out(), d.hostSink("console", console).in(),
 				LOOPBACK, port);
+		List<String> ids = d.design().nodes().stream().map(n -> n.id()).toList();
+		assertTrue(ids.indexOf("readThread") < ids.indexOf("writeThread"), "the reader is started first, as the example always did");
 		Pipeline pipeline = start(d);
 		assertEquals(InetAddress.getLocalHost(), pipeline.block(socket).getAddress(), "what main prints");
 		assertFalse(isFree(port), "the socket is on the port given");

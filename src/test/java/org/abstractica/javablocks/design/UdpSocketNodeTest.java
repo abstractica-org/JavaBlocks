@@ -268,6 +268,144 @@ class UdpSocketNodeTest
 		assertTrue(bare.getMessage().contains("node 'bare' needs setting 'maxPacketSize' as Integer"), bare.getMessage());
 	}
 
+	@Test
+	void anInterruptedStopClosesNoSocketAndTheNextStopFinishesTheJob() throws Exception
+	{
+		int port = freePort();
+		BlockingSink<DatagramPacket> sink = new BlockingSink<>();
+		Designer d = new Designer();
+		reader(d, port, sink);
+		pipeline = d.design().build(d.catalogue());
+		pipeline.start();
+		sendTo(port, "in flight");
+		assertTrue(sink.enteredWithin(2000));
+		java.util.concurrent.atomic.AtomicReference<Exception> thrown = new java.util.concurrent.atomic.AtomicReference<>();
+		Thread stopper = Async.daemon(() ->
+		{
+			try
+			{
+				pipeline.stop();
+			} catch (InterruptedException e)
+			{
+				thrown.set(e);
+			}
+		});
+		assertTrue(Async.parkedWithin(stopper, 2000), "stop() waits for the reader's put");
+
+		stopper.interrupt();
+
+		assertTrue(Async.finishesWithin(stopper, 2000));
+		assertInstanceOf(InterruptedException.class, thrown.get());
+		assertFalse(isFree(port), "the reader may still be running, so its socket is left open");
+		sink.release();
+		pipeline.stop();
+		assertTrue(isFree(port), "the next stop() closes it");
+	}
+
+	// --- a socket the host made itself is the host's: wired in as a host object, it is never closed ---
+
+	@Test
+	void aHostsOwnSocketWiredInAsASourceSurvivesStopAndThePipelineStartsAgain() throws Exception
+	{
+		int port = freePort();
+		UDPSocketBlock<DatagramPacket> own = org.abstractica.javablocks.blocks.udp.UDPBlocks.getUDPSocketBlock(port, 1024);
+		try
+		{
+			Sink<DatagramPacket> heard = new Sink<>();
+			Designer d = new Designer();
+			var source = d.hostSource("own", own);
+			var reader = d.<DatagramPacket>thread("reader");
+			var sink = d.hostSink("heard", heard);
+			d.wire(source.out(), reader.in());
+			d.wire(reader.out(), sink.in());
+			pipeline = d.design().build(d.catalogue());
+			pipeline.start();
+
+			pipeline.stop();
+
+			assertFalse(isFree(port), "the pipeline did not open this socket, so it does not close it");
+			pipeline.start();
+			sendTo(port, "after restart");
+			assertTrue(heard.receivedWithin(1, 2000));
+		} finally
+		{
+			if (pipeline != null) pipeline.stop();
+			own.close();
+		}
+	}
+
+	@Test
+	void stopClosesThePipelinesOwnSocketButNotAHostsSocketBesideIt() throws Exception
+	{
+		int ownPort = freePort();
+		UDPSocketBlock<DatagramPacket> own = org.abstractica.javablocks.blocks.udp.UDPBlocks.getUDPSocketBlock(ownPort, 1024);
+		try
+		{
+			int port = freePort();
+			Designer d = new Designer();
+			d.hostSink("own", own);
+			d.udpSocket("socket", port, 1024);
+			pipeline = d.design().build(d.catalogue());
+
+			pipeline.stop();
+
+			assertTrue(isFree(port), "the udpSocket node's socket is closed");
+			assertFalse(isFree(ownPort), "the host's socket is not");
+		} finally
+		{
+			own.close();
+		}
+	}
+
+	@Test
+	void aHostsOwnSocketSurvivesABuildThatFails() throws Exception
+	{
+		int port = freePort();
+		UDPSocketBlock<DatagramPacket> own = org.abstractica.javablocks.blocks.udp.UDPBlocks.getUDPSocketBlock(port, 1024);
+		try (DatagramSocket taken = new DatagramSocket(0))
+		{
+			Designer d = new Designer();
+			d.hostSink("own", own);
+			d.udpSocket("second", taken.getLocalPort(), 1024);
+
+			assertThrows(UncheckedIOException.class, () -> d.design().build(d.catalogue()));
+
+			assertFalse(isFree(port), "a failed build closes only the sockets it opened itself");
+		} finally
+		{
+			own.close();
+		}
+	}
+
+	@Test
+	void aHostsOwnSocketSharedByThePerKeyCopiesSurvivesARemovedHandler() throws Exception
+	{
+		int port = freePort();
+		UDPSocketBlock<DatagramPacket> shared = org.abstractica.javablocks.blocks.udp.UDPBlocks.getUDPSocketBlock(port, 1024);
+		try
+		{
+			Designer d = new Designer();
+			var peers = d.map("peers", (DatagramPacket p) -> p.getPort(), perKey ->
+			{
+				var out = perKey.hostSinkPerKey("out", key -> shared);
+				perKey.wire(perKey.entry(), out.in());
+			});
+			pipeline = d.design().build(d.catalogue());
+			MapBlock<Integer, DatagramPacket, ?> map = pipeline.block(peers);
+			byte[] bytes = "x".getBytes();
+			map.put(new DatagramPacket(bytes, bytes.length, InetAddress.getLoopbackAddress(), port));
+
+			map.removeHandler(port);
+			assertFalse(isFree(port), "removing one key's copy leaves the host's shared socket open");
+
+			pipeline.stop();
+			assertFalse(isFree(port), "and so does the pipeline's stop");
+		} finally
+		{
+			shared.close();
+		}
+	}
+
 	// --- inside a map's nested Design: one socket per copy ---
 
 	/** A map whose copy shows its messages in {@code shown} and has a socket on {@code port} with a reader. */

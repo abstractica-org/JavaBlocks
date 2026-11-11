@@ -18,19 +18,19 @@ public final class Pipeline implements ThreadControl
 	private final List<ThreadBlock<?>> threads = new ArrayList<>();
 	/** The map nodes' per-key copies. */
 	private final List<PerKeyCopies<?, ?>> maps;
-	/** The udpSocket nodes' sockets: opened at build, closed by {@link #stop()}. */
-	private final List<UDPSocketBlock<?>> sockets = new ArrayList<>();
+	/** The udpSocket nodes' sockets: opened at build, closed by {@link #stop()}. Never a host's own socket. */
+	private final List<UDPSocketBlock<?>> sockets;
 	/** True once {@link #stop()} has closed the sockets; a closed socket cannot be opened again. */
 	private volatile boolean socketsClosed;
 
-	Pipeline(Map<String, Object> blocks, List<PerKeyCopies<?, ?>> maps)
+	Pipeline(Map<String, Object> blocks, List<PerKeyCopies<?, ?>> maps, List<UDPSocketBlock<?>> sockets)
 	{
+		this.sockets = List.copyOf(sockets);
 		this.blocks = Collections.unmodifiableMap(blocks);
 		this.maps = List.copyOf(maps);
 		for (Object o : blocks.values())
 		{
 			if (o instanceof ThreadBlock<?> t) threads.add(t);
-			if (o instanceof UDPSocketBlock<?> s) sockets.add(s);
 		}
 	}
 
@@ -97,8 +97,12 @@ public final class Pipeline implements ThreadControl
 	 * made while the pipeline is stopped is built but not started; it starts with the next {@link #start()}.
 	 *
 	 * <p>Last, closes the udpSocket nodes' sockets, also when the pipeline was never started: they were
-	 * opened when it was built. A pipeline with sockets cannot be started again after this. If this
-	 * thread is interrupted while it waits, nothing is closed; call {@code stop()} again.
+	 * opened when it was built. A pipeline with sockets cannot be started again after this. A socket the
+	 * host made itself and wired in as a host source or sink is the host's: it is never closed here.
+	 *
+	 * <p>If this thread is interrupted while it waits, none of this pipeline's own sockets is closed
+	 * (per-key copies already stopped have closed theirs); call {@code stop()} again. Call it again, too,
+	 * after a key that arrived once the pipeline was stopped: its copy is built with its socket open.
 	 */
 	@Override
 	public void stop() throws InterruptedException

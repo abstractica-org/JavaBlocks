@@ -704,7 +704,9 @@ while no packet arrived, and `BufferedSocketBlock.stop()` hung.
 - **What does not change.** The socket is not closed by an interrupt,
   so a stopped reader can be started again. A packet that arrives in the
   same moment as the interrupt is returned, not dropped; the thread block
-  delivers it and then stops (J4). `put`, `close`, `getPort`,
+  delivers it and then stops (J4) — by the code's order (the flag is
+  checked only before a wait), not pinned: that moment cannot be forced
+  in a test. `put`, `close`, `getPort`,
   `getAddress`, and a `get()` on a closed socket (a `RuntimeException`
   wrapping the `SocketException`) are as they were.
 - **Rejected by the ruling:** closing the socket to stop (a socket error
@@ -744,14 +746,26 @@ fixed in J16. This step builds it.
   `maxPacketSize`. A socket that cannot be opened (the port is taken)
   is not a mistake in the Design, so it is an `UncheckedIOException`
   naming the node, not an `IllegalArgumentException`. Whenever building
-  fails after a socket was opened, every socket opened so far is closed:
-  a refused build leaves no port bound.
+  fails after a socket was opened, every socket the build opened so far
+  is closed. (One old hole remains, in the block, not the builder:
+  `UDPSocketBlockImpl`'s constructor binds its port and then asks for
+  the local host's address; if that lookup fails, that one socket stays
+  bound. Changing the block is the owner's.)
+- **Only its own sockets.** The Pipeline closes the sockets it opened
+  for `udpSocket` nodes, and no others: a socket block the host made
+  and wired in as a `hostSource`, `hostSink` or `hostSinkPerKey` (a
+  `BufferedSocketBlock` included) is the host's, is never closed by
+  `stop()`, a failed build or a removed handler, and never makes
+  `start()` refuse. (The first build of this step chose sockets by Java
+  type and closed those too; the review caught it, and tests now pin
+  it.)
 - **Stopping closes.** `Pipeline.stop()` stops its thread blocks, then
   the maps' copies, then closes its sockets, as ruled. It closes them
   also when the pipeline was never started (they were opened at build).
-  A `stop()` that is interrupted while waiting closes nothing, as it
-  already abandons the threads it has not reached; calling `stop()`
-  again finishes the job.
+  A `stop()` that is interrupted while waiting closes none of the
+  pipeline's own sockets, as it already abandons the threads it has not
+  reached (per-key copies it had already stopped have closed theirs);
+  calling `stop()` again finishes the job.
 - **A closed socket cannot be opened again**, so a pipeline whose
   sockets `stop()` has closed refuses `start()` with an
   `IllegalStateException`, before starting anything; the host builds the
@@ -769,6 +783,13 @@ fixed in J16. This step builds it.
   pipeline `stop()`, a live copy with a closed socket makes `start()`
   refuse like the pipeline's own sockets; removing that copy's handler
   lifts the refusal, and the key's next message builds a fresh copy.
+  A key that first arrives while the pipeline is stopped still gets its
+  copy built, not started (J14), and so its socket opened: a later
+  `stop()` closes it. A host that drops a stopped pipeline while
+  messages can still reach its maps should call `stop()` once more.
+  A copy in the middle of being removed never counts as a closed socket
+  for `start()`; that moment cannot be forced in a test, so that one
+  condition is reasoned, not mutation-proven.
 - **No block changes.** `UDPSocketBlock` has no way to ask whether it is
   closed, so the Pipeline remembers that it closed its sockets.
 - **Public details the run chose, open to the owner:** the handle's
@@ -779,7 +800,11 @@ fixed in J16. This step builds it.
 - **Tests** (`UdpSocketNodeTest`, each proven able to fail by a one-line
   mutation): the Designer writes the node as data; a pipeline sends
   through its socket and receives from it; `stop()` closes the socket
-  only after the reader's in-flight put, and frees the port; a never
+  only after the reader's in-flight put, and frees the port; an
+  interrupted `stop()` leaves the socket open and the next one closes
+  it; a host's own socket survives `stop()` (and the pipeline restarts),
+  a `stop()` that closes a `udpSocket` node beside it, a failed build,
+  and a removed handler when shared by the per-key copies; a never
   started pipeline's `stop()` frees the port; a stopped pipeline with a
   socket refuses to start and starts nothing; a port in use is refused
   naming the node and the sockets already opened are closed; a bad

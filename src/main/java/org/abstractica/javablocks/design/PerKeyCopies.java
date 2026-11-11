@@ -108,12 +108,15 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 		}
 	}
 
-	/** True when a live copy has had its sockets closed by a stop. */
+	/**
+	 * True when a live copy has had its sockets closed by a stop. A copy being removed does not count: it
+	 * is never started again, and its removal may be between closing its sockets and forgetting it.
+	 */
 	synchronized boolean hasClosedSockets()
 	{
 		for (Handler<K, E> h : live)
 		{
-			if (h.copy.hasClosedSockets()) return true;
+			if (!h.removed && h.copy.hasClosedSockets()) return true;
 		}
 		return false;
 	}
