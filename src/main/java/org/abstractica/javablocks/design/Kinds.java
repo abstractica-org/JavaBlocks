@@ -62,6 +62,7 @@ final class Kinds
 	static final String HOST_SOURCE = "hostSource";
 	static final String PING_PONG = "pingPong";
 	static final String MAP = "map";
+	static final String UDP_SOCKET = "udpSocket";
 	/** Only inside a map's nested Design: this key's messages enter here. */
 	static final String ENTRY = "entry";
 	/** Only inside a map's nested Design: a host Output made from the key. */
@@ -75,6 +76,8 @@ final class Kinds
 	static final String PROTOCOL = "protocol";
 	static final String OBJECT = "object";
 	static final String CAPACITY = "capacity";
+	static final String PORT = "port";
+	static final String MAX_PACKET_SIZE = "maxPacketSize";
 	/** A map's nested Design: the one setting that is not a string, number or boolean. */
 	static final String PER_KEY = "perKey";
 
@@ -138,6 +141,8 @@ final class Kinds
 		kind(PING_PONG, true, Map.of("in", PUSH_IN, "timer", PUSH_IN, "send", pushOut(true)),
 				Map.of(PROTOCOL, PingPongProtocol.class), Map.of(), false);
 		kind(MAP, true, Map.of("in", PUSH_IN), Map.of(FUNCTION, Function.class), Map.of(PER_KEY, Design.class), false);
+		kind(UDP_SOCKET, true, Map.of("in", PUSH_IN, "out", PULL_OUT), Map.of(),
+				Map.of(PORT, Integer.class, MAX_PACKET_SIZE, Integer.class), false);
 		kind(ENTRY, false, Map.of("out", pushOut(true)), Map.of(), Map.of(), false, true);
 		kind(HOST_SINK_PER_KEY, false, Map.of("in", PUSH_IN), Map.of(OBJECT, Function.class), Map.of(), false, true);
 	}

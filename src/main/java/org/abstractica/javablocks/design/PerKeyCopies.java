@@ -55,7 +55,7 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 
 	/**
 	 * Stops the removed handler's copy, each thread as {@link org.abstractica.javablocks.blocks.basic.ThreadBlock#stop()}
-	 * does. The copy stays tracked until its stop has finished: if this thread is interrupted first, the
+	 * does, and closes its sockets. The copy stays tracked until its stop has finished: if this thread is interrupted first, the
 	 * flag is kept and the pipeline's next {@code stop()} finishes the job; its next {@code start()} never
 	 * restarts it.
 	 */
@@ -106,6 +106,16 @@ final class PerKeyCopies<K, E> implements MapHandlerBlockFactory<K, E, PerKeyCop
 				if (h.removed) live.remove(h);
 			}
 		}
+	}
+
+	/** True when a live copy has had its sockets closed by a stop. */
+	synchronized boolean hasClosedSockets()
+	{
+		for (Handler<K, E> h : live)
+		{
+			if (h.copy.hasClosedSockets()) return true;
+		}
+		return false;
 	}
 
 	boolean isRunning()

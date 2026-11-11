@@ -720,3 +720,72 @@ while no packet arrived, and `BufferedSocketBlock.stop()` hung.
   next `get()` receives a packet); a `get()` already interrupted when
   called throws at once; a packet arriving after several 100 ms checks is
   still received whole. Each proven able to fail by a one-line mutation.
+
+## J17 — the `udpSocket` node: the Design's last ruled kind (goal 2; autopilot run 8)
+
+The names ruling (J13) lists `udpSocket` among the kinds, gives the
+socket handle `in()`/`out()`, and says the Pipeline "starts every thread
+block, stops them all, then closes sockets"; the map ruling (J14) says a
+removed copy's sockets are closed. The node waited on the socket wart,
+fixed in J16. This step builds it.
+
+- **In the data:** kind `udpSocket`, settings `port` and `maxPacketSize`
+  (both whole numbers, the arguments of `UDPBlocks.getUDPSocketBlock`),
+  ports `in` (packets pushed in are sent) and `out` (pull received
+  packets), and the reporter ports. `port` 0 asks the system for a free
+  port, as `DatagramSocket` does.
+- **In the Designer:** `d.udpSocket(id, port, maxPacketSize)` returns a
+  `UdpSocketNode` (`<Kind>Node`, as ruled), a
+  `NodeHandle<UDPSocketBlock<DatagramPacket>>`, so
+  `pipeline.block(socket).getAddress()` works, the ruling's own example.
+- **Building opens the socket**, through the existing factory. What the
+  data can show wrong is refused with the other problems before
+  anything is opened: a `port` outside 0–65535, a negative
+  `maxPacketSize`. A socket that cannot be opened (the port is taken)
+  is not a mistake in the Design, so it is an `UncheckedIOException`
+  naming the node, not an `IllegalArgumentException`. Whenever building
+  fails after a socket was opened, every socket opened so far is closed:
+  a refused build leaves no port bound.
+- **Stopping closes.** `Pipeline.stop()` stops its thread blocks, then
+  the maps' copies, then closes its sockets, as ruled. It closes them
+  also when the pipeline was never started (they were opened at build).
+  A `stop()` that is interrupted while waiting closes nothing, as it
+  already abandons the threads it has not reached; calling `stop()`
+  again finishes the job.
+- **A closed socket cannot be opened again**, so a pipeline whose
+  sockets `stop()` has closed refuses `start()` with an
+  `IllegalStateException`, before starting anything; the host builds the
+  Design again. (Starting it would only make each socket thread fail
+  with a socket error inside its worker.) A pipeline without sockets
+  restarts as before. This follows from the ruled "stop closes the
+  sockets"; the refusal instead of a failing worker is this step's
+  choice.
+- **In a map's nested Design** each copy opens its own socket when its
+  key first arrives (so a fixed `port` suits one key only; `port` 0 suits
+  any number), and the socket is closed when the copy is stopped: on
+  `removeHandler`, as the map ruling says, and on the pipeline's `stop()`.
+  A copy whose socket cannot be opened fails the put that brought the
+  key, like any per-key failure (J14), and leaves no handler. After a
+  pipeline `stop()`, a live copy with a closed socket makes `start()`
+  refuse like the pipeline's own sockets; removing that copy's handler
+  lifts the refusal, and the key's next message builds a fresh copy.
+- **No block changes.** `UDPSocketBlock` has no way to ask whether it is
+  closed, so the Pipeline remembers that it closed its sockets.
+- **Public details the run chose, open to the owner:** the handle's
+  name `UdpSocketNode` (by the ruled `<Kind>Node` pattern from the kind
+  `udpSocket`; the block's own type is spelled `UDPSocketBlock`); the
+  settings' names `port` and `maxPacketSize`; the exception types above;
+  the refused restart.
+- **Tests** (`UdpSocketNodeTest`, each proven able to fail by a one-line
+  mutation): the Designer writes the node as data; a pipeline sends
+  through its socket and receives from it; `stop()` closes the socket
+  only after the reader's in-flight put, and frees the port; a never
+  started pipeline's `stop()` frees the port; a stopped pipeline with a
+  socket refuses to start and starts nothing; a port in use is refused
+  naming the node and the sockets already opened are closed; a bad
+  `port` or `maxPacketSize` is listed with the other problems and opens
+  nothing; a map copy's socket is closed on `removeHandler` and on the
+  pipeline's stop, a fresh copy opens it again, and a closed live copy
+  refuses the restart until its handler is removed; a copy whose socket
+  cannot open fails the put and leaves no handler. Existing tests
+  unchanged.

@@ -2,6 +2,7 @@ package org.abstractica.javablocks.design;
 
 import org.abstractica.javablocks.blocks.basic.ThreadBlock;
 import org.abstractica.javablocks.blocks.basic.ThreadControl;
+import org.abstractica.javablocks.blocks.udp.UDPSocketBlock;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +18,10 @@ public final class Pipeline implements ThreadControl
 	private final List<ThreadBlock<?>> threads = new ArrayList<>();
 	/** The map nodes' per-key copies. */
 	private final List<PerKeyCopies<?, ?>> maps;
+	/** The udpSocket nodes' sockets: opened at build, closed by {@link #stop()}. */
+	private final List<UDPSocketBlock<?>> sockets = new ArrayList<>();
+	/** True once {@link #stop()} has closed the sockets; a closed socket cannot be opened again. */
+	private volatile boolean socketsClosed;
 
 	Pipeline(Map<String, Object> blocks, List<PerKeyCopies<?, ?>> maps)
 	{
@@ -25,6 +30,7 @@ public final class Pipeline implements ThreadControl
 		for (Object o : blocks.values())
 		{
 			if (o instanceof ThreadBlock<?> t) threads.add(t);
+			if (o instanceof UDPSocketBlock<?> s) sockets.add(s);
 		}
 	}
 
@@ -53,27 +59,57 @@ public final class Pipeline implements ThreadControl
 	/**
 	 * Starts the maps' live per-key copies, then every thread block in the Design's node order. A copy
 	 * made while the pipeline runs starts at once.
+	 *
+	 * @throws IllegalStateException if an earlier {@link #stop()} closed a socket of this pipeline, or
+	 *                               of a live per-key copy: a closed socket cannot be opened again, so
+	 *                               nothing is started. Build the Design again; for a copy's socket,
+	 *                               removing that copy's handler from its map is enough.
 	 */
 	@Override
 	public void start()
 	{
+		if (hasClosedSockets())
+		{
+			throw new IllegalStateException("stop() closed this pipeline's sockets, and a closed socket cannot be"
+					+ " opened again: build the Design again");
+		}
 		for (PerKeyCopies<?, ?> m : maps) m.start();
 		for (ThreadBlock<?> t : threads) t.start();
 	}
 
+	/** True when stop() has closed a socket of this pipeline or of a live per-key copy. */
+	boolean hasClosedSockets()
+	{
+		if (socketsClosed) return true;
+		for (PerKeyCopies<?, ?> m : maps)
+		{
+			if (m.hasClosedSockets()) return true;
+		}
+		return false;
+	}
+
 	/**
 	 * Stops every thread block, in the Design's node order; each stop waits as {@link ThreadBlock#stop()}
-	 * does. One that never returns holds up the rest: a thread pulling from a UDP socket (wired in as a
-	 * host source) does not wake on its stop until the socket is closed.
+	 * does, and one that never returns holds up the rest. A thread pulling from a udpSocket node stops
+	 * within about 100 ms.
 	 *
 	 * <p>Then stops every map's live per-key copies, once the threads that feed them have stopped. A copy
 	 * made while the pipeline is stopped is built but not started; it starts with the next {@link #start()}.
+	 *
+	 * <p>Last, closes the udpSocket nodes' sockets, also when the pipeline was never started: they were
+	 * opened when it was built. A pipeline with sockets cannot be started again after this. If this
+	 * thread is interrupted while it waits, nothing is closed; call {@code stop()} again.
 	 */
 	@Override
 	public void stop() throws InterruptedException
 	{
 		for (ThreadBlock<?> t : threads) t.stop();
 		for (PerKeyCopies<?, ?> m : maps) m.stop();
+		if (!sockets.isEmpty())
+		{
+			socketsClosed = true;
+			for (UDPSocketBlock<?> s : sockets) s.close();
+		}
 	}
 
 	/** True while any of the pipeline's thread blocks runs, its maps' per-key copies' included. */
