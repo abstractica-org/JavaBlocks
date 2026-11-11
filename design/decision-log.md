@@ -684,3 +684,39 @@ needs no socket, so it goes first.
   quiet for longer than the timeout and not before; the pipeline stops
   promptly with a short tick. Proven able to fail by one-line mutations of
   `FirstTest.design`.
+
+## J16 — a socket read answers an interrupt, by checking every 100 ms (owner ruling, 2026-11-11; carried out by autopilot run 8)
+
+Carries out `decisions/2026-11-10-should-a-thread-that-is-waiting-on.md`,
+ruled **the socket block wakes up on interrupt, by checking every
+100 ms**. The wart (found in J13, pinned then): Java never wakes a
+platform thread waiting in `DatagramSocket.receive` when the thread is
+interrupted, so a `ThreadBlock` reading a `UDPSocketBlock` never stopped
+while no packet arrived, and `BufferedSocketBlock.stop()` hung.
+
+- **What changes.** `UDPSocketBlockImpl` only. The socket gets a 100 ms
+  receive timeout (a fixed constant, as the record says, not a setting).
+  `get()` checks the calling thread's interrupt flag before each wait
+  and throws `InterruptedException` (clearing the flag, as every other
+  blocking `get()` does); a wait that times out is simply repeated. So an
+  interrupted `get()` ends within about 100 ms, and a packet that
+  arrives is returned as before, however long the wait was.
+- **What does not change.** The socket is not closed by an interrupt,
+  so a stopped reader can be started again. A packet that arrives in the
+  same moment as the interrupt is returned, not dropped; the thread block
+  delivers it and then stops (J4). `put`, `close`, `getPort`,
+  `getAddress`, and a `get()` on a closed socket (a `RuntimeException`
+  wrapping the `SocketException`) are as they were.
+- **Rejected by the ruling:** closing the socket to stop (a socket error
+  in the reader unless timed with a helper thread, no restart, hand-wired
+  readers still hang); a `DatagramChannel` that an interrupt closes (no
+  restart, a larger rewrite); leaving it.
+- **Tests.** The pin in `BufferedSocketBlockCharacterizationTest` is
+  flipped in this commit: `stop()` used to be still waiting after half a
+  second until another thread closed the socket; now it returns on its
+  own, with no packet and no outside close. New
+  `UDPSocketBlockCharacterizationTest`: an interrupt ends a waiting
+  `get()` with `InterruptedException` and leaves the socket open (the
+  next `get()` receives a packet); a `get()` already interrupted when
+  called throws at once; a packet arriving after several 100 ms checks is
+  still received whole. Each proven able to fail by a one-line mutation.
