@@ -130,6 +130,30 @@ class UdpSocketNodeTest
 	}
 
 	@Test
+	void theSocketsReporterPortsReachTheBlocksReporters() throws Exception
+	{
+		Sink<String> info = new Sink<>();
+		Sink<String> debug = new Sink<>();
+		Sink<String> error = new Sink<>();
+		Designer d = new Designer();
+		var socket = d.udpSocket("socket", 0, 1024);
+		d.wire(socket.info(), d.hostSink("info", info).in());
+		d.wire(socket.debug(), d.hostSink("debug", debug).in());
+		d.wire(socket.error(), d.hostSink("error", error).in());
+		pipeline = d.design().build(d.catalogue());
+
+		// The socket block reports nothing by itself; speak through its reporters as it would.
+		var block = (org.abstractica.javablocks.blocks.basic.impl.AbstractBlock) pipeline.block(socket);
+		block.INFO("an info");
+		block.DEBUG("a debug");
+		block.ERROR("an error");
+
+		assertTrue(info.items().stream().anyMatch(m -> m.contains("an info")), info.items().toString());
+		assertTrue(debug.items().stream().anyMatch(m -> m.contains("a debug")), debug.items().toString());
+		assertTrue(error.items().stream().anyMatch(m -> m.contains("an error")), error.items().toString());
+	}
+
+	@Test
 	void stopClosesTheSocketOnlyAfterTheReadersPutInFlight() throws Exception
 	{
 		int port = freePort();

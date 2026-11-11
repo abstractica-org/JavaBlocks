@@ -64,6 +64,8 @@ public final class Pipeline implements ThreadControl
 	 *                               of a live per-key copy: a closed socket cannot be opened again, so
 	 *                               nothing is started. Build the Design again; for a copy's socket,
 	 *                               removing that copy's handler from its map is enough.
+	 *                               The check is not locked against a {@code stop()} running at the same
+	 *                               time: do not start and stop a pipeline from two threads at once.
 	 */
 	@Override
 	public void start()

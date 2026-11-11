@@ -71,3 +71,5 @@ the executable form of this node.
   stops; removing a closed copy's handler lifts the refused restart.
   Only sockets the build opened are ever closed: a socket block the
   host made and wired in as a host source or sink stays the host's.
+  A put racing `removeHandler` for its key can hit the removed copy's
+  closed socket and fail: remove when nothing is putting for that key.

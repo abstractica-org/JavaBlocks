@@ -787,11 +787,26 @@ fixed in J16. This step builds it.
   copy built, not started (J14), and so its socket opened: a later
   `stop()` closes it. A host that drops a stopped pipeline while
   messages can still reach its maps should call `stop()` once more.
+  Closing a removed copy's socket has one edge worth knowing: the map
+  finds a key's handler under its lock and puts into it outside the
+  lock (J5), so a put that races `removeHandler` for the same key can
+  reach the removed copy; if that copy's wiring pushes into its socket
+  on the putting thread, the put fails with a `RuntimeException`
+  wrapping "Socket closed" (before, it landed in a stopped copy), and a
+  thread block feeding the map dies of it. It follows from the ruled
+  "a removed copy's sockets are closed"; not pinned (the race cannot be
+  forced through the map), and named in the run report. Remove a
+  handler when nothing is putting for its key, as J14 already advises.
   A copy in the middle of being removed never counts as a closed socket
   for `start()`; that moment cannot be forced in a test, so that one
   condition is reasoned, not mutation-proven.
 - **No block changes.** `UDPSocketBlock` has no way to ask whether it is
   closed, so the Pipeline remembers that it closed its sockets.
+- **`start()` and `stop()` from two threads at once** are not guarded
+  against each other, as before: a `stop()` that closes the sockets just
+  after `start()` has checked them lets a reader start on a closed
+  socket (its worker dies with a socket error). Locking them would
+  change what `stop()` waits under, which is the owner's.
 - **Public details the run chose, open to the owner:** the handle's
   name `UdpSocketNode` (by the ruled `<Kind>Node` pattern from the kind
   `udpSocket`; the block's own type is spelled `UDPSocketBlock`); the
@@ -799,7 +814,8 @@ fixed in J16. This step builds it.
   the refused restart.
 - **Tests** (`UdpSocketNodeTest`, each proven able to fail by a one-line
   mutation): the Designer writes the node as data; a pipeline sends
-  through its socket and receives from it; `stop()` closes the socket
+  through its socket and receives from it; its reporter ports reach the
+  block's reporters; `stop()` closes the socket
   only after the reader's in-flight put, and frees the port; an
   interrupted `stop()` leaves the socket open and the next one closes
   it; a host's own socket survives `stop()` (and the pipeline restarts),
@@ -846,8 +862,10 @@ J15; with the socket node (J17) the UDP examples follow, the same way.
   (`IllegalStateException`); before, `KeyboardToUDP` never closed its
   socket and could be restarted, and `UDPToConsole.stop()` hung until a
   packet came (the wart fixed in J16). A consequence of the ruled
-  Pipeline, not a new choice; pinned by a test and named in the run
-  report for the owner.
+  Pipeline, not a new choice; pinned by a test, named in the run
+  report, and open to the owner like J17's details: if the example
+  classes should stay restartable, that needs a ruling on what
+  `Pipeline.stop()` does with sockets.
 - **Tests** (`UdpExamplesTest`, each proven able to fail by one-line
   mutations of the four `design` methods and the two classes): each
   line pulled by `KeyboardToUDP`'s pipeline reaches the receiver's port
