@@ -32,4 +32,20 @@ class BufferedSocketBlockCharacterizationTest
 				"stop() interrupts the receive thread, which notices within about 100 ms; no packet, no outside close");
 		assertFalse(block.isRunning());
 	}
+
+	/** The assembly passes the socket block's {@code getPort()} on, wart included: always -1. */
+	@Test
+	void getPortIsMinusOneAsTheSocketBlocksIs() throws Exception
+	{
+		BufferedSocketBlock<String> block = Assemblies.getBufferedSocketBlock(0, 1024, 4,
+				UDPFunctions.getDatagramPacketToStringFunction(),
+				UDPFunctions.getStringToDatagramPacketFunction());
+		try
+		{
+			assertEquals(-1, block.getPort());
+		} finally
+		{
+			block.close();
+		}
+	}
 }

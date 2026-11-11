@@ -1,7 +1,7 @@
 ---
 type: project-node
 summary: "Open at the start of any JavaBlocks work — a plain-Java dataflow library where blocks wire by handing references, only `ThreadBlock` owns a thread and only `BufferBlock` holds back-pressure; the tree holds this orientation and the thread-model node."
-verified: 2026-11-10
+verified: 2026-11-11
 ---
 
 # JavaBlocks
@@ -26,13 +26,16 @@ first the known warts, each fixed or ruled to stay, one ruling each
 viewer adapter, which waits for `wiring-playground`'s graph contract.
 The base is clean before any public API is built on it. Goal 1 is
 done: every known wart was fixed under its own ruling (J4–J11, merged
-2026-11-09). Goal 2's form is ruled — a Design as plain data with a
-typed Java builder on top (J12) — and its names, catalogue and map slot
-are ruled (J13). The core is built in `design/` (`Design`, `Catalogue`,
-`Designer`, `Pipeline`, push/pull ports, every kind but `udpSocket`;
-the map node as a nested Design per key, J14); the socket node waits on
-a newly found wart (a thread reading a UDP socket never stops). FirstTest
-is built through the Design (J15); the UDP examples wait on the socket.
+2026-11-09). **Goal 2 is done too** (2026-11-11): the
+declarative assembly's form (J12), names, catalogue and map slot (J13)
+were ruled and built in `design/` — `Design`, `Catalogue`, `Designer`,
+`Pipeline`, push/pull ports, every ruled kind, the map node as a nested
+Design per key (J14) and the socket node (J17, after the socket wart's
+fix, J16) — and FirstTest (J15) and the `examples/udp` pipelines (J18)
+are built through it, with tests. Goal 3 waits for `wiring-playground`'s
+graph contract. One wart is open, pinned and with the owner: a socket
+block's `getPort()` always answers -1
+(`decisions/2026-11-11-should-a-socket-block-s-getport-give-the.md`).
 
 ## The model in one paragraph
 
@@ -58,7 +61,7 @@ function of the stream. Everything else (`IfBlock`, `VariableBlock`,
   protocol on top of `MapBlock`, and `firsttest/FirstTest`, the only
   runnable check), `examples/`, `reporter/`, and `design/` — the
   declarative assembly (J13).
-- `src/test/` — the characterization tests (34 from J3, 36 after J4, 43 after J5–J11, 44 with the socket-stop pin) and the `design/` tests (50: 29 for the core, 21 for the map node), and `FirstTestTest` (3, J15: FirstTest built through the Design); see `design/` in the tree.
+- `src/test/` — 121 tests: the characterization tests of the blocks (49: 34 from J3, grown with each cleanup J4–J11, the socket fix J16 and the `getPort` pin), the `design/` tests (62: 29 core, 21 map node, 12 socket node), `FirstTestTest` (3, J15) and `UdpExamplesTest` (7, J18); see `design/` in the tree.
 - `pom.xml` — `org.abstractica:javablocks:0.3.0-SNAPSHOT`, Java 25,
   JUnit 5 (J2).
 - `design/decision-log.md` — this repo's record, entries **J1…**.
@@ -75,6 +78,6 @@ assessment beside it. Neither is duplicated here.
 - `thread-model/` — the settled thread-domain model and the
   `stop()` contract, crystallized from the J3 characterization tests
   and updated for the J4 fix.
-- `design/` — the declarative assembly as ruled (J12–J14) and built:
+- `design/` — the declarative assembly as ruled (J12–J14) and built (through J17):
   Design, Catalogue, Designer, Pipeline, the kind table and its checks,
   the map node.

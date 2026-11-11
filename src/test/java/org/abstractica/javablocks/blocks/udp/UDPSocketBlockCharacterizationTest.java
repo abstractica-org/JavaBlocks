@@ -123,4 +123,20 @@ class UDPSocketBlockCharacterizationTest
 		assertTrue(Async.finishesWithin(getter, 2000));
 		assertEquals("late packet", outcome.get());
 	}
+
+	/**
+	 * A wart, pinned as found (2026-11-11): {@code getPort()} asks the socket for the port it is
+	 * connected to, and a socket block is never connected, so the answer is always -1, not the port
+	 * the block listens on. Whether to fix it is the owner's:
+	 * {@code decisions/2026-11-11-should-a-socket-block-s-getport-give-the.md}.
+	 */
+	@Test
+	void getPortIsAlwaysMinusOneNotThePortTheSocketListensOn() throws Exception
+	{
+		open();
+		assertEquals(-1, socket.getPort());
+		send("still -1 after sending and receiving");
+		socket.get();
+		assertEquals(-1, socket.getPort());
+	}
 }

@@ -1,6 +1,6 @@
 ---
 type: project-node
-summary: "The declarative assembly (J12–J17): a Design as plain data, a Catalogue of named Java objects, the typed Designer, a Pipeline built through the existing factories, and the map node as a nested Design copied per key, the socket node closed by stop(); checked whole before building."
+summary: "The declarative assembly (J12–J17): a Design as plain data, a Catalogue of named Java objects, the typed Designer, a Pipeline built through the existing factories; map nodes copy a nested Design per key, stop() closes socket nodes."
 verified: 2026-11-11
 related:
   - path: ..
