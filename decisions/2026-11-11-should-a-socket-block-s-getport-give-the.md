@@ -1,10 +1,11 @@
 ---
 id: 2026-11-11-should-a-socket-block-s-getport-give-the
 title: "Should a socket block's getPort() give the port it listens on?"
-status: proposed
+status: ruled
 stakes: low
 confidence: 90
 opened: 2026-11-11
+ruled: 2026-11-11
 repo: javablocks
 by: 6311e91a-2878-4858-8a92-6b48e411cb6f
 recommends: getport-gives-the-port-the-socket-listens-on
@@ -58,3 +59,7 @@ Make getPort() give the listening port. The -1 is plainly a slip (the constructo
 ## If nothing is decided
 
 getPort() keeps answering -1, pinned by two tests. Everything built so far works: nothing in the library calls it. A host that opens a socket on port 0 cannot learn its port.
+
+## Ruling
+
+**getPort() gives the port the socket listens on** (`getport-gives-the-port-the-socket-listens-on`). Tog, 2026-11-11, from the project pages.
